@@ -90,7 +90,7 @@ export default function Dashboard() {
 
       const [walletRes, matchesRes] = await Promise.all([
         api.get('/wallet'),
-        api.get('/matches'),
+        api.get('/data/matches'),
       ])
       
       // Ensure wallet data is valid
