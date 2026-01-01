@@ -125,7 +125,12 @@ export default function Dashboard() {
       } else if (err.response?.status === 401) {
         errorMessage = 'Authentication failed. Please login again.'
       } else if (err.response?.status === 500) {
-        errorMessage = 'Server error. The backend may be experiencing issues. Please try again later.'
+        // Don't show error if we got default values (database not connected)
+        if (wallet && wallet.balance === 0 && wallet.lockedBalance === 0 && matches.length === 0) {
+          errorMessage = '' // Clear error - default values are acceptable
+        } else {
+          errorMessage = 'Server error. The backend may be experiencing issues. Please try again later.'
+        }
       } else if (err.response?.data?.error) {
         errorMessage = typeof err.response.data.error === 'string' 
           ? err.response.data.error 
