@@ -1,10 +1,10 @@
-// Combined wallet routes - get wallet, deposit
+// Dynamic wallet route - handles /api/wallet/deposit
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
-import { prisma } from '../db';
-import { getWallet } from '../services/wallet';
-import { verifyAuth, sendUnauthorized } from './_shared/auth';
-import { setCorsHeaders, handleOptions } from './_shared/cors';
+import { prisma } from '../../db';
+import { getWallet } from '../../services/wallet';
+import { verifyAuth, sendUnauthorized } from '../_shared/auth';
+import { setCorsHeaders, handleOptions } from '../_shared/cors';
 
 const depositSchema = z.object({
   amount: z.number().positive(),
@@ -17,28 +17,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleOptions(res);
   }
 
-  const path = req.url?.split('?')[0] || '';
+  const slug = req.query.slug as string;
   const user = await verifyAuth(req);
   
   if (!user) {
     return sendUnauthorized(res);
   }
 
-  // Get wallet
-  if ((path.endsWith('/wallet') || path === '/api/wallet') && req.method === 'GET') {
-    try {
-      const wallet = await getWallet(user.id);
-      return res.json({
-        balance: Number(wallet.balance),
-        lockedBalance: Number(wallet.lockedBalance),
-      });
-    } catch (error: any) {
-      return res.status(500).json({ error: error.message || 'Failed to get wallet' });
-    }
-  }
-
   // Deposit
-  if (path.endsWith('/deposit') && req.method === 'POST') {
+  if (slug === 'deposit' && req.method === 'POST') {
     try {
       const parsed = depositSchema.parse(req.body);
       const wallet = await prisma.wallet.update({
@@ -71,3 +58,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   return res.status(404).json({ error: 'Route not found' });
 }
+

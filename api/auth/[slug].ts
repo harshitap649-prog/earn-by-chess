@@ -1,11 +1,11 @@
-// Combined auth routes - signup, login, firebase
+// Dynamic auth route handler - handles /api/auth/signup, /api/auth/login, /api/auth/firebase
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
-import { prisma } from '../db';
-import { CONFIG } from '../config';
-import { setCorsHeaders, handleOptions } from './_shared/cors';
+import { prisma } from '../../db';
+import { CONFIG } from '../../config';
+import { setCorsHeaders, handleOptions } from '../_shared/cors';
 
 const signupSchema = z.object({
   name: z.string().min(2),
@@ -32,10 +32,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleOptions(res);
   }
 
-  const path = req.url?.split('?')[0] || '';
+  const slug = req.query.slug as string;
 
   // Signup
-  if (path.endsWith('/signup') && req.method === 'POST') {
+  if (slug === 'signup' && req.method === 'POST') {
     try {
       const body = signupSchema.parse(req.body);
       const existingUser = await prisma.user.findUnique({
@@ -80,7 +80,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Login
-  if (path.endsWith('/login') && req.method === 'POST') {
+  if (slug === 'login' && req.method === 'POST') {
     try {
       const body = loginSchema.parse(req.body);
       const user = await prisma.user.findUnique({
@@ -117,7 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Firebase auth
-  if (path.endsWith('/firebase') && req.method === 'POST') {
+  if (slug === 'firebase' && req.method === 'POST') {
     try {
       const parsed = firebaseAuthSchema.parse(req.body);
       let user = await prisma.user.findUnique({

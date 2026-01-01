@@ -1,11 +1,11 @@
-// Combined payment routes - create order, verify
+// Dynamic payment route - handles /api/payment/create-order, /api/payment/verify
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 import { z } from 'zod';
-import { prisma } from '../db';
-import { CONFIG } from '../config';
-import { verifyAuth, sendUnauthorized } from './_shared/auth';
-import { setCorsHeaders, handleOptions } from './_shared/cors';
+import { prisma } from '../../db';
+import { CONFIG } from '../../config';
+import { verifyAuth, sendUnauthorized } from '../_shared/auth';
+import { setCorsHeaders, handleOptions } from '../_shared/cors';
 
 let Razorpay: any = null;
 try {
@@ -44,7 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleOptions(res);
   }
 
-  const path = req.url?.split('?')[0] || '';
+  const slug = req.query.slug as string;
   const user = await verifyAuth(req);
   
   if (!user) {
@@ -52,7 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Create order
-  if (path.endsWith('/create-order') && req.method === 'POST') {
+  if (slug === 'create-order' && req.method === 'POST') {
     try {
       if (!razorpay) {
         return res.status(503).json({
@@ -88,7 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Verify payment
-  if (path.endsWith('/verify') && req.method === 'POST') {
+  if (slug === 'verify' && req.method === 'POST') {
     try {
       const parsed = verifyPaymentSchema.parse(req.body);
 
