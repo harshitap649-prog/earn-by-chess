@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm install && vite build",
+  "buildCommand": "npm install && npm run build:skip-check",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": "vite",

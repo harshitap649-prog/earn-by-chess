@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd client && npm install && vite build",
+  "buildCommand": "cd client && npm install && npm run build:skip-check",
   "outputDirectory": "client/dist",
   "installCommand": "cd client && npm install",
   "framework": "vite",
