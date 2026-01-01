@@ -46,11 +46,45 @@ export default function Profile() {
 
   const loadProfile = async () => {
     try {
+      setError('')
       const response = await api.get('/data/profile')
-      setProfile(response.data)
+      
+      if (response.data) {
+        setProfile(response.data)
+      } else {
+        throw new Error('No data received from server')
+      }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load profile')
       console.error('Failed to load profile:', err)
+      const errorMessage = err.response?.data?.error 
+        ? (typeof err.response.data.error === 'string' ? err.response.data.error : 'Failed to load profile')
+        : err.message || 'Failed to load profile'
+      setError(errorMessage)
+      
+      // Set default profile to prevent blank screen
+      setProfile({
+        user: {
+          id: user?.id || 'unknown',
+          name: user?.name || 'User',
+          email: user?.email || 'user@example.com',
+          kycVerified: false,
+          createdAt: new Date().toISOString(),
+        },
+        wallet: {
+          balance: 0,
+          lockedBalance: 0,
+        },
+        stats: {
+          totalMatches: 0,
+          wins: 0,
+          losses: 0,
+          draws: 0,
+          totalEarnings: 0,
+          totalSpent: 0,
+          netEarnings: 0,
+        },
+        recentTransactions: [],
+      })
     } finally {
       setLoading(false)
     }
@@ -109,7 +143,15 @@ export default function Profile() {
   }
 
   if (!profile) {
-    return null
+    return (
+      <div className="profile-page">
+        <Navigation />
+        <div className="profile-error">
+          <p>Profile data not available</p>
+          <button onClick={loadProfile}>Retry</button>
+        </div>
+      </div>
+    )
   }
 
   const winRate = profile.stats.totalMatches > 0
