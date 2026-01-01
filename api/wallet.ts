@@ -1,7 +1,14 @@
+// Combined wallet routes - get wallet, deposit
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { getWallet } from '../../services/wallet';
-import { verifyAuth, sendUnauthorized } from '../_shared/auth';
-import { setCorsHeaders, handleOptions } from '../_shared/cors';
+import { z } from 'zod';
+import { prisma } from '../db';
+import { getWallet } from '../services/wallet';
+import { verifyAuth, sendUnauthorized } from './_shared/auth';
+import { setCorsHeaders, handleOptions } from './_shared/cors';
+
+const depositSchema = z.object({
+  amount: z.number().positive(),
+});
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCorsHeaders(res);
@@ -10,25 +17,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleOptions(res);
   }
 
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  const path = req.url?.split('?')[0] || '';
+  const user = await verifyAuth(req);
+  
+  if (!user) {
+    return sendUnauthorized(res);
   }
 
-  try {
-    const user = await verifyAuth(req);
-    if (!user) {
-      return sendUnauthorized(res);
+  // Get wallet
+  if ((path.endsWith('/wallet') || path === '/api/wallet') && req.method === 'GET') {
+    try {
+      const wallet = await getWallet(user.id);
+      return res.json({
+        balance: Number(wallet.balance),
+        lockedBalance: Number(wallet.lockedBalance),
+      });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message || 'Failed to get wallet' });
     }
-
-    const wallet = await getWallet(user.id);
-
-    return res.json({
-      balance: Number(wallet.balance),
-      lockedBalance: Number(wallet.lockedBalance),
-    });
-  } catch (error: any) {
-    console.error('Wallet error:', error);
-    return res.status(500).json({ error: error.message || 'Failed to get wallet' });
   }
-}
 
+  // Deposit
+  if (path.endsWith('/deposit') && req.method === 'POST') {
+    try {
+      const parsed = depositSchema.parse(req.body);
+      const wallet = await prisma.wallet.update({
+        where: { userId: user.id },
+        data: {
+          balance: { increment: parsed.amount },
+        },
+      });
+
+      await prisma.transaction.create({
+        data: {
+          userId: user.id,
+          type: 'DEPOSIT',
+          amount: parsed.amount,
+          description: `Deposit of ₹${parsed.amount}`,
+        },
+      });
+
+      return res.json({
+        balance: Number(wallet.balance),
+        message: 'Deposit successful',
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
+      return res.status(500).json({ error: error.message || 'Failed to deposit' });
+    }
+  }
+
+  return res.status(404).json({ error: 'Route not found' });
+}
