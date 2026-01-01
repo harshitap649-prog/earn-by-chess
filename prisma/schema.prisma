@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String?  // Optional for Firebase auth users
+  kycVerified  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  wallet          Wallet?
+  matchesCreated  Match[]          @relation("MatchCreator")
+  matchesJoined   Match[]          @relation("MatchOpponent")
+  transactions    Transaction[]
+  withdrawRequests WithdrawRequest[]
+}
+
+model Wallet {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  balance      Decimal  @default(0)
+  lockedBalance Decimal @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Match {
+  id         String   @id @default(cuid())
+  creatorId  String
+  opponentId String?
+  entryFee   Decimal
+  status     String   // waiting, started, completed
+  winnerId   String?
+  createdAt  DateTime @default(now())
+  startedAt  DateTime?
+  completedAt DateTime?
+
+  creator  User  @relation("MatchCreator", fields: [creatorId], references: [id])
+  opponent User? @relation("MatchOpponent", fields: [opponentId], references: [id])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  amount      Decimal
+  type        String   // match_win, match_loss, deposit, withdraw, etc.
+  description String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WithdrawRequest {
+  id          String   @id @default(cuid())
+  userId      String
+  amount      Decimal
+  status      String   @default("pending") // pending, approved, rejected
+  requestedAt DateTime @default(now())
+  processedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+

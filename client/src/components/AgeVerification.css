@@ -1,0 +1,303 @@
+.age-verification-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.age-verification-content {
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: 20px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  animation: slideUp 0.4s ease-out;
+  overflow: hidden;
+}
+
+.age-verification-content.age-rejected {
+  max-width: 450px;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.age-verification-header {
+  text-align: center;
+  padding: 40px 30px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.age-verification-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.age-verification-content h1 {
+  color: var(--text-primary);
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.age-verification-body {
+  padding: 30px;
+  text-align: center;
+}
+
+.age-main-text {
+  color: var(--text-primary);
+  font-size: 18px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.age-main-text strong {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.age-subtext {
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 25px;
+}
+
+.age-warning {
+  background: rgba(245, 158, 11, 0.15);
+  border: 2px solid var(--warning);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+.age-warning p {
+  color: var(--warning);
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.age-verification-footer {
+  display: flex;
+  gap: 15px;
+  padding: 30px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.age-btn {
+  flex: 1;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-height: 52px;
+}
+
+.age-btn-confirm {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--text-primary);
+  color: var(--text-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.age-btn-confirm:hover {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.2);
+}
+
+.age-btn-reject {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.age-btn-reject:hover {
+  background: var(--bg-card);
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+}
+
+.age-footer-text {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  margin: 0;
+  padding-top: 15px;
+}
+
+/* Rejected state styles */
+.age-verification-content.age-rejected .age-verification-header {
+  background: rgba(239, 68, 68, 0.1);
+  border-bottom-color: var(--error);
+}
+
+.age-verification-content.age-rejected .age-verification-icon {
+  font-size: 72px;
+}
+
+.age-verification-content.age-rejected .age-verification-body {
+  padding: 30px;
+}
+
+.age-verification-content.age-rejected h1 {
+  color: var(--error);
+}
+
+.age-verification-content.age-rejected .age-main-text {
+  color: var(--text-primary);
+  font-size: 17px;
+}
+
+.age-verification-content.age-rejected .age-subtext {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-top: 15px;
+}
+
+.age-verification-content.age-rejected .age-verification-footer {
+  flex-direction: column;
+  padding: 20px 30px 30px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .age-verification-content {
+    max-width: 100%;
+    margin: 10px;
+    border-radius: 16px;
+  }
+
+  .age-verification-header {
+    padding: 30px 20px 15px;
+  }
+
+  .age-verification-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+  }
+
+  .age-verification-content h1 {
+    font-size: 22px;
+  }
+
+  .age-verification-body {
+    padding: 20px;
+  }
+
+  .age-main-text {
+    font-size: 16px;
+  }
+
+  .age-main-text strong {
+    font-size: 18px;
+  }
+
+  .age-subtext {
+    font-size: 14px;
+  }
+
+  .age-warning {
+    padding: 12px;
+  }
+
+  .age-warning p {
+    font-size: 13px;
+  }
+
+  .age-verification-footer {
+    flex-direction: column;
+    padding: 20px;
+    gap: 12px;
+  }
+
+  .age-btn {
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .age-verification-overlay {
+    padding: 10px;
+  }
+
+  .age-verification-content {
+    margin: 0;
+    border-radius: 12px;
+  }
+
+  .age-verification-header {
+    padding: 25px 15px 12px;
+  }
+
+  .age-verification-icon {
+    font-size: 40px;
+  }
+
+  .age-verification-content h1 {
+    font-size: 20px;
+  }
+
+  .age-verification-body {
+    padding: 18px;
+  }
+
+  .age-main-text {
+    font-size: 15px;
+  }
+
+  .age-subtext {
+    font-size: 13px;
+  }
+
+  .age-verification-footer {
+    padding: 18px;
+  }
+}
+

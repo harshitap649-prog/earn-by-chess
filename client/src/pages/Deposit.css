@@ -1,0 +1,341 @@
+.deposit-page {
+  min-height: 100vh;
+  background: #000000;
+  padding-bottom: 40px;
+}
+
+.deposit-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.deposit-header {
+  text-align: center;
+  color: var(--text-primary);
+  margin-bottom: 30px;
+  padding-top: 20px;
+}
+
+.deposit-header h1 {
+  font-size: 28px;
+  margin-bottom: 10px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.deposit-header p {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.deposit-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.wallet-card,
+.deposit-card,
+.payment-methods-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+}
+
+.wallet-card h2,
+.deposit-card h2,
+.payment-methods-card h2 {
+  font-size: 20px;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.wallet-balance {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.balance-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.balance-item:hover {
+  border-color: var(--text-primary);
+  transform: translateY(-2px);
+}
+
+.balance-item.total {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.balance-item.total .balance-label,
+.balance-item.total .balance-value {
+  color: white;
+}
+
+.balance-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.balance-item.total .balance-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.balance-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.balance-value.locked {
+  color: var(--warning);
+}
+
+.deposit-form {
+  margin-bottom: 30px;
+}
+
+.form-group {
+  margin-bottom: 25px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.amount-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.currency-symbol {
+  position: absolute;
+  left: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  z-index: 1;
+}
+
+.amount-input-wrapper input {
+  width: 100%;
+  padding: 16px 16px 16px 45px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.amount-input-wrapper input:focus {
+  outline: none;
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.quick-deposit-section {
+  margin-bottom: 25px;
+}
+
+.quick-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.quick-amounts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.quick-deposit-btn {
+  padding: 14px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.quick-deposit-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.deposit-submit-btn {
+  width: 100%;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.deposit-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  border-color: var(--text-primary);
+}
+
+.deposit-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.deposit-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  padding-top: 20px;
+  border-top: 2px solid var(--border-color);
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.feature-icon {
+  font-size: 32px;
+}
+
+.feature-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.feature-text strong {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.feature-text span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.payment-methods-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.payment-method-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.payment-method-item:hover {
+  border-color: var(--text-primary);
+  transform: translateY(-2px);
+}
+
+.method-icon {
+  font-size: 32px;
+}
+
+.method-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.method-info strong {
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.method-info span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .deposit-container {
+    padding: 15px;
+  }
+
+  .deposit-header h1 {
+    font-size: 24px;
+  }
+
+  .deposit-header p {
+    font-size: 14px;
+  }
+
+  .wallet-card,
+  .deposit-card,
+  .payment-methods-card {
+    padding: 20px;
+  }
+
+  .wallet-balance {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .balance-value {
+    font-size: 20px;
+  }
+
+  .quick-amounts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .deposit-features {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .payment-methods-list {
+    grid-template-columns: 1fr;
+  }
+}
