@@ -75,8 +75,13 @@ export default function Game() {
 
   const loadMatch = async () => {
     try {
+      setLoading(true)
+      console.log('Loading match:', matchId)
+      
       const response = await api.get(`/match/${matchId}`)
       const matchData = response.data
+      
+      console.log('Match data received:', matchData)
       
       if (!matchData) {
         throw new Error('Match data not found')
@@ -123,214 +128,266 @@ export default function Game() {
       }
 
       // Initialize socket with better connection settings
-      const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000'
-      const socket = io(socketUrl, {
-        transports: ['websocket', 'polling'], // Try both websocket and polling
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        reconnectionAttempts: Infinity, // Keep trying to reconnect
-        timeout: 20000,
-        forceNew: false, // Reuse existing connection if available
-        autoConnect: true,
-      })
-
-      socket.on('connect', () => {
-        console.log('✅ Socket connected')
-        console.log('   Socket ID:', socket.id)
-        console.log('   Joining match:', matchId)
-        console.log('   User ID:', user?.id)
+      // Note: Socket.io won't work on Vercel serverless functions
+      // The game will still work in practice mode without Socket.io
+      try {
+        const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000'
         
-        // Join the match room
-        socket.emit('join-match', { matchId, userId: user?.id })
+        // Only try to connect Socket.io if we're not on Vercel
+        // On Vercel, Socket.io won't work, so skip it
+        const isVercel = window.location.hostname.includes('vercel.app')
         
-        // Also manually join the room (backup)
-        socket.emit('join', `match-${matchId}`)
-      })
-      
-      socket.on('error', (error) => {
-        console.error('❌ Socket error:', error)
-      })
-
-      socket.on('connect_error', (error) => {
-        console.error('❌ Socket connection error:', error)
-        console.error('   Make sure the backend server is running on http://localhost:3000')
-      })
-
-      socket.on('disconnect', (reason) => {
-        console.log('⚠️ Socket disconnected:', reason)
-        if (reason === 'io server disconnect') {
-          // Server disconnected the socket, reconnect manually
-          socket.connect()
+        if (isVercel) {
+          console.log('⚠️ Running on Vercel - Socket.io disabled. Game will work in practice mode.')
+          // Don't initialize Socket.io on Vercel
+          setLoading(false)
+          return
         }
-      })
-
-      socket.on('reconnect', (attemptNumber) => {
-        console.log(`✅ Socket reconnected after ${attemptNumber} attempts`)
-        socket.emit('join-match', { matchId, userId: user?.id })
-      })
-
-      socket.on('player-joined', (data: { userId: string; isComputer?: boolean }) => {
-        console.log('👤 Player joined event:', data.userId, 'isComputer:', data.isComputer)
-        console.log('   Current user ID:', user?.id)
-        console.log('   Match data:', matchData)
         
-        if (data.isComputer) {
-          // Computer opponent joined for free play
-          console.log('🤖 Computer opponent joined!')
-          setWaitingForOpponent(false)
-          api.get(`/match/${matchId}`).then(res => {
-            setMatch(res.data)
-            const currentTurn = gameRef.current.turn()
-            const color = res.data.creatorId === user?.id ? 'white' : 'black'
-            setIsPlayerTurn(
-              (currentTurn === 'w' && color === 'white') || 
-              (currentTurn === 'b' && color === 'black')
-            )
-            console.log('✅ Game ready with computer opponent')
-          }).catch(err => {
-            console.error('Error refreshing match after computer joined:', err)
-          })
-        } else if (data.userId !== user?.id) {
-          // Human opponent joined
-          setWaitingForOpponent(false)
-          api.get(`/match/${matchId}`).then(res => {
-            setMatch(res.data)
-            const currentTurn = gameRef.current.turn()
-            const color = res.data.creatorId === user?.id ? 'white' : 'black'
-            setIsPlayerTurn(
-              (currentTurn === 'w' && color === 'white') || 
-              (currentTurn === 'b' && color === 'black')
-            )
-          })
-        }
-      })
+        const socket = io(socketUrl, {
+          transports: ['websocket', 'polling'], // Try both websocket and polling
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          reconnectionAttempts: Infinity, // Keep trying to reconnect
+          timeout: 20000,
+          forceNew: false, // Reuse existing connection if available
+          autoConnect: true,
+        })
 
-      socket.on('chess-move', (data: { move: any; userId: string; isComputer?: boolean }) => {
-        console.log('📥 Chess move event received:', {
-          userId: data.userId,
-          isComputer: data.isComputer,
-          moveFrom: data.move?.from,
-          moveTo: data.move?.to,
-          currentUserId: user?.id
+        socket.on('connect', () => {
+          console.log('✅ Socket connected')
+          console.log('   Socket ID:', socket.id)
+          console.log('   Joining match:', matchId)
+          console.log('   User ID:', user?.id)
+          
+          // Join the match room
+          socket.emit('join-match', { matchId, userId: user?.id })
+          
+          // Also manually join the room (backup)
+          socket.emit('join', `match-${matchId}`)
         })
         
-        if (data.userId !== user?.id) {
-          console.log('📥 Opponent move received:', data.move, 'isComputer:', data.isComputer)
-          try {
-            const currentFen = gameRef.current.fen()
-            const newGame = new Chess(currentFen)
-            
-            console.log('   Current game FEN:', currentFen)
-            console.log('   Move data:', data.move)
-            
-            // Apply the move - handle both move object format and {from, to, promotion} format
-            let moveResult
-            if (typeof data.move === 'string') {
-              // SAN notation
-              console.log('   Applying move as SAN:', data.move)
-              moveResult = newGame.move(data.move)
-            } else if (data.move.from && data.move.to) {
-              // Object with from, to, promotion
-              console.log('   Applying move as object:', {
-                from: data.move.from,
-                to: data.move.to,
-                promotion: data.move.promotion
-              })
-              moveResult = newGame.move({
-                from: data.move.from,
-                to: data.move.to,
-                promotion: data.move.promotion || 'q'
-              })
-            } else if (data.move.san) {
-              // Move has SAN notation
-              console.log('   Applying move using SAN from object:', data.move.san)
-              moveResult = newGame.move(data.move.san)
-            } else {
-              // Try to use the move object directly
-              console.log('   Trying to apply move object directly')
-              moveResult = newGame.move(data.move)
-            }
-            
-            if (moveResult) {
-              console.log('✅ Opponent move applied successfully:', moveResult)
-              console.log('   New FEN:', newGame.fen())
-              console.log('   New turn:', newGame.turn())
-              
-              setGame(newGame)
-              setMoveHistory(newGame.history())
-              
-              // Update turn - after opponent (computer) moves, it's player's turn
-              const currentTurn = newGame.turn()
-              const isPlayerTurnNow = (currentTurn === 'w' && playerColor === 'white') || 
-                                     (currentTurn === 'b' && playerColor === 'black')
-              setIsPlayerTurn(isPlayerTurnNow)
-              
-              console.log('   Player turn updated:', isPlayerTurnNow)
-              
-              updateGameStatus(newGame)
-            } else {
-              console.error('❌ Failed to apply opponent move:', data.move)
-              console.error('   Current FEN:', currentFen)
-              console.error('   Available moves:', newGame.moves().slice(0, 5))
-              console.error('   Move object keys:', Object.keys(data.move || {}))
-            }
-          } catch (e: any) {
-            console.error('❌ Invalid move received:', e)
-            console.error('   Error message:', e?.message)
-            console.error('   Move data:', data.move)
-            console.error('   Current FEN:', gameRef.current.fen())
+        socket.on('error', (error) => {
+          console.error('❌ Socket error:', error)
+        })
+
+        socket.on('connect_error', (error) => {
+          console.error('❌ Socket connection error:', error)
+          console.error('   Make sure the backend server is running on http://localhost:3000')
+        })
+
+        socket.on('disconnect', (reason) => {
+          console.log('⚠️ Socket disconnected:', reason)
+          if (reason === 'io server disconnect') {
+            // Server disconnected the socket, reconnect manually
+            socket.connect()
           }
-        } else {
-          console.log('   Move is from current user, ignoring')
-        }
-      })
+        })
 
-      socket.on('game-over', async (data: { winnerId: string; reason: string; isDraw?: boolean }) => {
-        const entryFee = Number(matchData.entryFee)
-        const { winnerPrize } = calculatePrize(entryFee)
-        
-        if (data.isDraw) {
-          setGameStatus('Draw! Entry fees refunded')
-        } else {
-          const winMessage = data.winnerId === user?.id ? `You Won! 🎉 +₹${winnerPrize}` : `You Lost -₹${entryFee}`
-          setGameStatus(winMessage)
-        }
-        setIsPlayerTurn(false)
-        
-        // Complete match on backend
-        try {
-          await api.post(`/match/complete/${matchId}`, { 
-            winnerId: data.winnerId,
-            isDraw: data.isDraw || false
+        socket.on('reconnect', (attemptNumber) => {
+          console.log(`✅ Socket reconnected after ${attemptNumber} attempts`)
+          socket.emit('join-match', { matchId, userId: user?.id })
+        })
+
+        socket.on('player-joined', (data: { userId: string; isComputer?: boolean }) => {
+          console.log('👤 Player joined event:', data.userId, 'isComputer:', data.isComputer)
+          console.log('   Current user ID:', user?.id)
+          console.log('   Match data:', matchData)
+          
+          if (data.isComputer) {
+            // Computer opponent joined for free play
+            console.log('🤖 Computer opponent joined!')
+            setWaitingForOpponent(false)
+            api.get(`/match/${matchId}`).then(res => {
+              setMatch(res.data)
+              const currentTurn = gameRef.current.turn()
+              const color = res.data.creatorId === user?.id ? 'white' : 'black'
+              setIsPlayerTurn(
+                (currentTurn === 'w' && color === 'white') || 
+                (currentTurn === 'b' && color === 'black')
+              )
+              console.log('✅ Game ready with computer opponent')
+            }).catch(err => {
+              console.error('Error refreshing match after computer joined:', err)
+            })
+          } else if (data.userId !== user?.id) {
+            // Human opponent joined
+            setWaitingForOpponent(false)
+            api.get(`/match/${matchId}`).then(res => {
+              setMatch(res.data)
+              const currentTurn = gameRef.current.turn()
+              const color = res.data.creatorId === user?.id ? 'white' : 'black'
+              setIsPlayerTurn(
+                (currentTurn === 'w' && color === 'white') || 
+                (currentTurn === 'b' && color === 'black')
+              )
+            })
+          }
+        })
+
+        socket.on('chess-move', (data: { move: any; userId: string; isComputer?: boolean }) => {
+          console.log('📥 Chess move event received:', {
+            userId: data.userId,
+            isComputer: data.isComputer,
+            moveFrom: data.move?.from,
+            moveTo: data.move?.to,
+            currentUserId: user?.id
           })
-        } catch (e) {
-          console.error('Failed to complete match:', e)
-        }
-      })
+          
+          if (data.userId !== user?.id) {
+            console.log('📥 Opponent move received:', data.move, 'isComputer:', data.isComputer)
+            try {
+              const currentFen = gameRef.current.fen()
+              const newGame = new Chess(currentFen)
+              
+              console.log('   Current game FEN:', currentFen)
+              console.log('   Move data:', data.move)
+              
+              // Apply the move - handle both move object format and {from, to, promotion} format
+              let moveResult
+              if (typeof data.move === 'string') {
+                // SAN notation
+                console.log('   Applying move as SAN:', data.move)
+                moveResult = newGame.move(data.move)
+              } else if (data.move.from && data.move.to) {
+                // Object with from, to, promotion
+                console.log('   Applying move as object:', {
+                  from: data.move.from,
+                  to: data.move.to,
+                  promotion: data.move.promotion
+                })
+                moveResult = newGame.move({
+                  from: data.move.from,
+                  to: data.move.to,
+                  promotion: data.move.promotion || 'q'
+                })
+              } else if (data.move.san) {
+                // Move has SAN notation
+                console.log('   Applying move using SAN from object:', data.move.san)
+                moveResult = newGame.move(data.move.san)
+              } else {
+                // Try to use the move object directly
+                console.log('   Trying to apply move object directly')
+                moveResult = newGame.move(data.move)
+              }
+              
+              if (moveResult) {
+                console.log('✅ Opponent move applied successfully:', moveResult)
+                console.log('   New FEN:', newGame.fen())
+                console.log('   New turn:', newGame.turn())
+                
+                setGame(newGame)
+                setMoveHistory(newGame.history())
+                
+                // Update turn - after opponent (computer) moves, it's player's turn
+                const currentTurn = newGame.turn()
+                const isPlayerTurnNow = (currentTurn === 'w' && playerColor === 'white') || 
+                                       (currentTurn === 'b' && playerColor === 'black')
+                setIsPlayerTurn(isPlayerTurnNow)
+                
+                console.log('   Player turn updated:', isPlayerTurnNow)
+                
+                updateGameStatus(newGame)
+              } else {
+                console.error('❌ Failed to apply opponent move:', data.move)
+                console.error('   Current FEN:', currentFen)
+                console.error('   Available moves:', newGame.moves().slice(0, 5))
+                console.error('   Move object keys:', Object.keys(data.move || {}))
+              }
+            } catch (e: any) {
+              console.error('❌ Invalid move received:', e)
+              console.error('   Error message:', e?.message)
+              console.error('   Move data:', data.move)
+              console.error('   Current FEN:', gameRef.current.fen())
+            }
+          } else {
+            console.log('   Move is from current user, ignoring')
+          }
+        })
 
-      socket.on('match-completed', (data: { winnerId?: string; isDraw?: boolean }) => {
-        // Use matchData from the closure
-        const entryFee = Number(matchData.entryFee)
-        const { winnerPrize } = calculatePrize(entryFee)
-        
-        if (data.isDraw) {
-          setGameStatus('Draw! Entry fees refunded')
-        } else if (data.winnerId === user?.id) {
-          setGameStatus(`You Won! 🎉 +₹${winnerPrize}`)
-        } else {
-          setGameStatus(`You Lost -₹${entryFee}`)
-        }
-        setIsPlayerTurn(false)
-      })
+        socket.on('game-over', async (data: { winnerId: string; reason: string; isDraw?: boolean }) => {
+          const entryFee = Number(matchData.entryFee)
+          const { winnerPrize } = calculatePrize(entryFee)
+          
+          if (data.isDraw) {
+            setGameStatus('Draw! Entry fees refunded')
+          } else {
+            const winMessage = data.winnerId === user?.id ? `You Won! 🎉 +₹${winnerPrize}` : `You Lost -₹${entryFee}`
+            setGameStatus(winMessage)
+          }
+          setIsPlayerTurn(false)
+          
+          // Complete match on backend
+          try {
+            await api.post(`/match/complete/${matchId}`, { 
+              winnerId: data.winnerId,
+              isDraw: data.isDraw || false
+            })
+          } catch (e) {
+            console.error('Failed to complete match:', e)
+          }
+        })
 
-      socketRef.current = socket
-      setLoading(false)
+        socket.on('match-completed', (data: { winnerId?: string; isDraw?: boolean }) => {
+          // Use matchData from the closure
+          const entryFee = Number(matchData.entryFee)
+          const { winnerPrize } = calculatePrize(entryFee)
+          
+          if (data.isDraw) {
+            setGameStatus('Draw! Entry fees refunded')
+          } else if (data.winnerId === user?.id) {
+            setGameStatus(`You Won! 🎉 +₹${winnerPrize}`)
+          } else {
+            setGameStatus(`You Lost -₹${entryFee}`)
+          }
+          setIsPlayerTurn(false)
+        })
+
+        socketRef.current = socket
+        setLoading(false)
+      } catch (socketError: any) {
+        console.error('Socket initialization error:', socketError)
+        // Continue without Socket.io - game will work in practice mode
+        setLoading(false)
+      }
     } catch (err: any) {
       console.error('Failed to load match:', err)
+      console.error('Error details:', {
+        message: err.message,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        url: err.config?.url,
+        data: err.response?.data,
+      })
+      
+      // If 404, navigate away
       if (err.response?.status === 404) {
+        console.error('Match not found, redirecting to dashboard')
         navigate('/dashboard')
+        return
       }
+      
+      // For other errors (network, 500, etc.), show a default match state
+      // This allows the game to still render in practice mode
+      console.warn('API error, but allowing game to render in practice mode')
+      const defaultMatch: Match = {
+        id: matchId || 'unknown',
+        creatorId: user?.id || 'unknown',
+        opponentId: null,
+        entryFee: 0, // Default to free play
+        status: 'waiting',
+        creator: { name: user?.name || 'You' },
+      }
+      setMatch(defaultMatch)
+      setPlayerColor('white')
+      setWaitingForOpponent(false) // Allow practice mode
+      setIsPlayerTurn(true) // Allow moves
+      
+      // Don't try to connect Socket.io if API failed
+      // Game will work in practice mode without Socket.io
+      console.log('⚠️ Socket.io disabled due to API error. Game will work in practice mode only.')
+      
       setLoading(false)
     }
   }
