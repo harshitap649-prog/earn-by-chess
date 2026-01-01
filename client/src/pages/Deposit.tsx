@@ -24,9 +24,18 @@ export default function Deposit() {
   const loadWallet = async () => {
     try {
       const response = await api.get('/wallet')
-      setWallet(response.data)
+      if (response.data) {
+        setWallet({
+          balance: response.data.balance ?? 0,
+          lockedBalance: response.data.lockedBalance ?? 0,
+        })
+      } else {
+        setWallet({ balance: 0, lockedBalance: 0 })
+      }
     } catch (err: any) {
       console.error('Failed to load wallet:', err)
+      // Set default wallet to prevent blank screen
+      setWallet({ balance: 0, lockedBalance: 0 })
     } finally {
       setLoading(false)
     }

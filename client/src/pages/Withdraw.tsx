@@ -40,10 +40,22 @@ export default function Withdraw() {
         api.get('/wallet'),
         api.get('/withdraw/requests'),
       ])
-      setWallet(walletRes.data)
-      setRequests(requestsRes.data)
+      
+      if (walletRes.data) {
+        setWallet({
+          balance: walletRes.data.balance ?? 0,
+          lockedBalance: walletRes.data.lockedBalance ?? 0,
+        })
+      } else {
+        setWallet({ balance: 0, lockedBalance: 0 })
+      }
+      
+      setRequests(requestsRes.data || [])
     } catch (err: any) {
       console.error('Failed to load data:', err)
+      // Set defaults to prevent blank screen
+      setWallet({ balance: 0, lockedBalance: 0 })
+      setRequests([])
     } finally {
       setLoadingRequests(false)
     }

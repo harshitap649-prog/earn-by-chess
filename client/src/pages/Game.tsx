@@ -77,6 +77,11 @@ export default function Game() {
     try {
       const response = await api.get(`/match/${matchId}`)
       const matchData = response.data
+      
+      if (!matchData) {
+        throw new Error('Match data not found')
+      }
+      
       setMatch(matchData)
 
       // Determine player color

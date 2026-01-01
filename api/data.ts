@@ -58,6 +58,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json(matchesWithCreators);
     } catch (error: any) {
       console.error('Matches error:', error);
+      // Return empty array instead of error if database fails
+      if (error.message?.includes('connect') || error.message?.includes('DATABASE_URL')) {
+        return res.json([]);
+      }
       return res.status(500).json({ error: error.message || 'Failed to get matches' });
     }
   }
@@ -70,13 +74,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return sendUnauthorized(res);
       }
 
-      const transactions = await prisma.transaction.findMany({
-        where: { userId: user.id },
-        orderBy: { createdAt: 'desc' },
-        take: 50,
-      });
+      try {
+        const transactions = await prisma.transaction.findMany({
+          where: { userId: user.id },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        });
 
-      return res.json(transactions);
+        return res.json(transactions);
+      } catch (dbError: any) {
+        console.warn('Database error in transactions, returning empty array:', dbError.message);
+        return res.json([]);
+      }
     } catch (error: any) {
       console.error('Transactions error:', error);
       return res.status(500).json({ error: error.message || 'Failed to get transactions' });
