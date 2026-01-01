@@ -33,6 +33,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const slug = req.query.slug as string;
+  
+  // Handle all HTTP methods
+  if (!slug) {
+    return res.status(404).json({ error: 'Route not found' });
+  }
 
   // Signup
   if (slug === 'signup' && req.method === 'POST') {

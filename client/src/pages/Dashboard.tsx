@@ -115,16 +115,26 @@ export default function Dashboard() {
         baseURL: err.config?.baseURL,
       })
       
-      // Show helpful error message
+      // Show helpful error message - ensure it's a string, not an object
+      let errorMessage = 'Failed to load data';
+      
       if (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error')) {
-        setError('Cannot connect to API server. The backend may not be deployed yet.')
+        errorMessage = 'Cannot connect to API server. The backend may not be deployed yet.'
       } else if (err.response?.status === 404) {
-        setError(`API endpoint not found: ${err.config?.url}. Please check if the backend API routes are deployed.`)
+        errorMessage = `API endpoint not found: ${err.config?.url || 'unknown'}. Please check if the backend API routes are deployed.`
       } else if (err.response?.status === 401) {
-        setError('Authentication failed. Please login again.')
-      } else {
-        setError(err.response?.data?.error || `Failed to load data: ${err.message}`)
+        errorMessage = 'Authentication failed. Please login again.'
+      } else if (err.response?.status === 500) {
+        errorMessage = 'Server error. The backend may be experiencing issues. Please try again later.'
+      } else if (err.response?.data?.error) {
+        errorMessage = typeof err.response.data.error === 'string' 
+          ? err.response.data.error 
+          : 'An error occurred'
+      } else if (err.message) {
+        errorMessage = typeof err.message === 'string' ? err.message : 'An unknown error occurred'
       }
+      
+      setError(errorMessage)
       
       // Set default values to prevent crashes
       setWallet({ balance: 0, lockedBalance: 0 })

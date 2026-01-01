@@ -13,9 +13,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const path = req.url?.split('?')[0] || '';
-  const isMatches = path.includes('/matches') || path.endsWith('/matches');
-  const isTransactions = path.includes('/transactions') || path.endsWith('/transactions');
-  const isProfile = path.includes('/profile') || path.endsWith('/profile');
+  const isMatches = path.includes('/matches') || path.endsWith('/matches') || path.endsWith('/data/matches');
+  const isTransactions = path.includes('/transactions') || path.endsWith('/transactions') || path.endsWith('/data/transactions');
+  const isProfile = path.includes('/profile') || path.endsWith('/profile') || path.endsWith('/data/profile');
 
   // Matches (public, no auth needed)
   if (isMatches && req.method === 'GET') {

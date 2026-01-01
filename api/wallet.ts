@@ -21,12 +21,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return sendUnauthorized(res);
     }
 
-    const wallet = await getWallet(user.id);
-
-    return res.json({
-      balance: Number(wallet.balance),
-      lockedBalance: Number(wallet.lockedBalance),
-    });
+    try {
+      const wallet = await getWallet(user.id);
+      return res.json({
+        balance: Number(wallet.balance || 0),
+        lockedBalance: Number(wallet.lockedBalance || 0),
+      });
+    } catch (dbError: any) {
+      console.error('Database error in wallet:', dbError);
+      // Return default values if database fails
+      return res.json({
+        balance: 0,
+        lockedBalance: 0,
+      });
+    }
   } catch (error: any) {
     console.error('Wallet error:', error);
     return res.status(500).json({ error: error.message || 'Failed to get wallet' });
