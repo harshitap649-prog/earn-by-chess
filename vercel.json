@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm install && cd client && npm install && npm run build:skip-check",
+  "buildCommand": "npm install && npx prisma generate && cd client && npm install && npm run build:skip-check",
   "outputDirectory": "client/dist",
   "installCommand": "npm install && cd client && npm install",
   "framework": "vite",
@@ -9,10 +9,6 @@
     }
   },
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

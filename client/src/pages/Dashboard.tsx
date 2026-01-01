@@ -80,23 +80,55 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
+      // Test API connection first
+      try {
+        await api.get('/health')
+      } catch (healthErr: any) {
+        console.error('Health check failed:', healthErr)
+        // Continue anyway, might be 404 if health endpoint doesn't exist
+      }
+
       const [walletRes, matchesRes] = await Promise.all([
         api.get('/wallet'),
         api.get('/matches'),
       ])
-      setWallet(walletRes.data)
-      setMatches(matchesRes.data)
+      
+      // Ensure wallet data is valid
+      if (walletRes.data) {
+        setWallet({
+          balance: walletRes.data.balance ?? 0,
+          lockedBalance: walletRes.data.lockedBalance ?? 0,
+        })
+      } else {
+        setWallet({ balance: 0, lockedBalance: 0 })
+      }
+      
+      setMatches(matchesRes.data || [])
       setError('') // Clear any previous errors
     } catch (err: any) {
       console.error('Failed to load data:', err)
+      console.error('Error details:', {
+        message: err.message,
+        code: err.code,
+        status: err.response?.status,
+        url: err.config?.url,
+        baseURL: err.config?.baseURL,
+      })
+      
       // Show helpful error message
       if (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error')) {
-        setError('Cannot connect to server. Please check if the backend is deployed and running.')
+        setError('Cannot connect to API server. The backend may not be deployed yet.')
       } else if (err.response?.status === 404) {
-        setError('Backend API not found. Please deploy the backend server.')
+        setError(`API endpoint not found: ${err.config?.url}. Please check if the backend API routes are deployed.`)
+      } else if (err.response?.status === 401) {
+        setError('Authentication failed. Please login again.')
       } else {
-        setError(err.response?.data?.error || 'Failed to load data. Please try again.')
+        setError(err.response?.data?.error || `Failed to load data: ${err.message}`)
       }
+      
+      // Set default values to prevent crashes
+      setWallet({ balance: 0, lockedBalance: 0 })
+      setMatches([])
     } finally {
       setLoading(false)
     }
@@ -207,11 +239,11 @@ export default function Dashboard() {
           <div className="wallet-info">
             <div className="wallet-item">
               <span className="label">Available Balance:</span>
-              <span className="value">₹{wallet?.balance.toFixed(2) || '0.00'}</span>
+              <span className="value">₹{wallet?.balance != null ? wallet.balance.toFixed(2) : '0.00'}</span>
             </div>
             <div className="wallet-item">
               <span className="label">Locked Balance:</span>
-              <span className="value locked">₹{wallet?.lockedBalance.toFixed(2) || '0.00'}</span>
+              <span className="value locked">₹{wallet?.lockedBalance != null ? wallet.lockedBalance.toFixed(2) : '0.00'}</span>
             </div>
             <div className="wallet-item total">
               <span className="label">Total:</span>
