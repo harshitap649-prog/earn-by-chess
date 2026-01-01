@@ -12,10 +12,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleOptions(res);
   }
 
-  const path = req.url?.split('?')[0] || '';
+  // Get the path from the request
+  // On Vercel, the path will be like '/data/profile' (without /api prefix)
+  // The query might be in req.query or req.url
+  const fullPath = req.url || '';
+  const path = fullPath.split('?')[0] || '';
+  
+  // Check for matches, transactions, or profile in the path
   const isMatches = path.includes('/matches') || path.endsWith('/matches') || path.endsWith('/data/matches');
   const isTransactions = path.includes('/transactions') || path.endsWith('/transactions') || path.endsWith('/data/transactions');
   const isProfile = path.includes('/profile') || path.endsWith('/profile') || path.endsWith('/data/profile');
+  
+  // Debug logging (only in development)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('API Data Route - Path:', path, 'isProfile:', isProfile, 'isMatches:', isMatches, 'isTransactions:', isTransactions);
+  }
 
   // Matches (public, no auth needed)
   if (isMatches && req.method === 'GET') {
