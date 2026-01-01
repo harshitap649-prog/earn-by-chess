@@ -99,32 +99,32 @@ export default function Game() {
       const isFreePlay = Number(matchData.entryFee) === 0;
       const hasComputerOpponent = isFreePlay && matchData.opponentId;
       
-      // If match is started and has opponent (including computer), game is ready
-      if (matchData.status === 'started' && (matchData.opponentId || isFreePlay)) {
+      // For free play matches, always allow practice mode (don't wait for opponent)
+      if (isFreePlay) {
         setWaitingForOpponent(false)
-        // Set turn based on game state
-        const currentTurn = gameRef.current.turn()
-        setIsPlayerTurn(
-          (currentTurn === 'w' && color === 'white') || 
-          (currentTurn === 'b' && color === 'black')
-        )
+        // Always allow moves in free play mode
+        setIsPlayerTurn(true)
+        console.log('🎮 Free play match - practice mode enabled')
         
-        // If computer opponent exists, log it
         if (hasComputerOpponent) {
           console.log('✅ Computer opponent ready:', matchData.opponentId)
           console.log('🎮 Free play match with AI - game ready to start!')
         }
-      } else if (matchData.status === 'waiting' || (!matchData.opponentId && !isFreePlay)) {
-        setWaitingForOpponent(true)
-        setIsPlayerTurn(false)
       } else {
-        // Match is started but no opponent yet (shouldn't happen for free play, but handle it)
-        setWaitingForOpponent(false)
-        const currentTurn = gameRef.current.turn()
-        setIsPlayerTurn(
-          (currentTurn === 'w' && color === 'white') || 
-          (currentTurn === 'b' && color === 'black')
-        )
+        // For paid matches, check if opponent has joined
+        if (matchData.status === 'started' && matchData.opponentId) {
+          setWaitingForOpponent(false)
+          // Set turn based on game state
+          const currentTurn = gameRef.current.turn()
+          setIsPlayerTurn(
+            (currentTurn === 'w' && color === 'white') || 
+            (currentTurn === 'b' && color === 'black')
+          )
+        } else {
+          // Waiting for opponent
+          setWaitingForOpponent(true)
+          setIsPlayerTurn(false)
+        }
       }
 
       // Initialize socket with better connection settings
