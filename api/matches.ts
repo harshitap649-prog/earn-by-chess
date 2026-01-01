@@ -27,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Get creator info separately
     const matchesWithCreators = await Promise.all(
-      matches.map(async (match) => {
+      matches.map(async (match: any) => {
         try {
           const creator = await prisma.user.findUnique({
             where: { id: match.creatorId },

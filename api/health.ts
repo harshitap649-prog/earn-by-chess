@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { setCorsHeaders } from './_shared/cors';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export async function healthHandler(req: VercelRequest, res: VercelResponse) {
   setCorsHeaders(res);
   
   return res.json({ 
@@ -10,4 +10,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     timestamp: new Date().toISOString()
   });
 }
+
+export default healthHandler;
 

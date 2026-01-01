@@ -57,7 +57,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             id: parsed.firebaseUid,
             name: parsed.name,
             email: parsed.email,
-            username: parsed.name.toLowerCase().replace(/\s+/g, ''),
             passwordHash: null,
           },
         });
@@ -81,9 +80,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       token,
       user: {
         id: user.id,
-        username: user.username || user.name,
-        email: user.email,
         name: user.name,
+        email: user.email,
       },
     });
   } catch (error: any) {
