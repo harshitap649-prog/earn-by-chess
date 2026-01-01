@@ -433,14 +433,17 @@ export default function Game() {
     const isFreePlay = match ? Number(match.entryFee) === 0 : false
     const isPracticeMode = isFreePlay && !match?.opponentId
     const hasComputerOpponent = isFreePlay && match?.opponentId
+    const isVercel = window.location.hostname.includes('vercel.app')
     
-    // In practice mode, allow moves regardless of turn
-    // For regular games (including computer matches), check turn and opponent
-    if (!isPracticeMode) {
-      if (!isPlayerTurn || !socketRef.current || waitingForOpponent) return
+    // For free play matches, always allow moves (practice mode works without Socket.io)
+    if (isFreePlay) {
+      // Allow moves in free play mode - no socket required
     } else {
-      // In practice mode, socket might not be needed, but still try to use it if available
-      if (!socketRef.current && !isFreePlay) return
+      // For paid matches, check turn, socket, and opponent
+      if (!isPlayerTurn || waitingForOpponent) return
+      // On Vercel, Socket.io won't work, so allow moves without socket for free play
+      // For paid matches, we still need socket (but it won't work on Vercel)
+      if (!isVercel && !socketRef.current) return
     }
 
     try {
@@ -458,13 +461,20 @@ export default function Game() {
         
         // Update turn
         const currentTurn = newGame.turn()
-        // In practice mode, always allow moves (user plays both sides)
+        const isVercel = window.location.hostname.includes('vercel.app')
+        
+        // In practice mode (free play without opponent), always allow moves (user plays both sides)
         if (isPracticeMode) {
           setIsPlayerTurn(true) // Always allow moves in practice mode
         } else if (hasComputerOpponent) {
           // For computer matches, disable player turn after move (wait for computer)
-          setIsPlayerTurn(false)
+          // But on Vercel, computer won't work, so keep allowing moves
+          setIsPlayerTurn(isVercel ? true : false)
+        } else if (isFreePlay) {
+          // For free play, always allow moves
+          setIsPlayerTurn(true)
         } else {
+          // For paid matches, check if it's player's turn
           setIsPlayerTurn(
             (currentTurn === 'w' && playerColor === 'white') || 
             (currentTurn === 'b' && playerColor === 'black')
@@ -474,7 +484,8 @@ export default function Game() {
         updateGameStatus(newGame)
 
         // Send move to opponent (or just track it in practice mode)
-        if (socketRef.current) {
+        // On Vercel, Socket.io won't work, so skip sending moves
+        if (!isVercel && socketRef.current) {
           if (socketRef.current.connected) {
             console.log(`📤 Sending move to server:`, moveResult);
             socketRef.current.emit('chess-move', {
@@ -483,15 +494,16 @@ export default function Game() {
               userId: user?.id,
             });
           } else {
-            console.error('❌ Socket not connected! Cannot send move to server.');
-            console.error('   Make sure the backend server is running on http://localhost:3000');
+            console.warn('⚠️ Socket not connected. Move saved locally only.');
             // Still update local game state even if socket isn't connected
             if (hasComputerOpponent) {
-              alert('⚠️ Cannot connect to server. Computer moves will not work. Please refresh the page.');
+              console.warn('⚠️ Cannot connect to server. Computer moves will not work.');
             }
           }
+        } else if (isVercel) {
+          console.log('📤 Move made (Vercel - Socket.io disabled, move saved locally)');
         } else {
-          console.error('❌ Socket not initialized!');
+          console.warn('⚠️ Socket not initialized. Move saved locally only.');
         }
       }
     } catch (e) {
@@ -507,7 +519,17 @@ export default function Game() {
   if (loading) {
     return (
       <div className="game-container">
-        <div className="loading">Loading game...</div>
+        <Navigation />
+        <div className="loading" style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          minHeight: '60vh',
+          color: 'var(--text-primary)',
+          fontSize: '18px'
+        }}>
+          Loading game...
+        </div>
       </div>
     )
   }
@@ -515,7 +537,34 @@ export default function Game() {
   if (!match) {
     return (
       <div className="game-container">
-        <div className="loading">Match not found</div>
+        <Navigation />
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          minHeight: '60vh',
+          color: 'var(--text-primary)',
+          padding: '20px',
+          textAlign: 'center'
+        }}>
+          <h2>Match not found</h2>
+          <p>Unable to load match data. You can still practice in free play mode.</p>
+          <button 
+            onClick={() => navigate('/dashboard')}
+            style={{
+              marginTop: '20px',
+              padding: '12px 24px',
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)',
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            Go to Dashboard
+          </button>
+        </div>
       </div>
     )
   }
