@@ -211,7 +211,7 @@ app.post("/auth/login", async (req, res) => {
     const parsed = schema.parse(req.body);
     const user = await prisma.user.findUnique({ where: { email: parsed.email } });
 
-    if (!user) {
+    if (!user || !user.passwordHash) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 

@@ -1,0 +1,16 @@
+server.ts
+services/
+sockets/
+middleware/
+prisma/
+db.ts
+config.ts
+load-env.ts
+tsconfig.json
+package.json
+package-lock.json
+*.md
+!client/README.md
+start-*.bat
+dist/
+
