@@ -46,7 +46,7 @@ export default function Profile() {
 
   const loadProfile = async () => {
     try {
-      const response = await api.get('/profile')
+      const response = await api.get('/data/profile')
       setProfile(response.data)
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load profile')
