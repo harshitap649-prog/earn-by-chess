@@ -1050,6 +1050,199 @@ app.get("/withdraw/requests", authMiddleware, async (req: AuthedRequest, res) =>
   }
 });
 
+// Data routes - for compatibility with Vercel serverless functions
+// These routes match what the frontend expects: /data/matches, /data/profile, /data/transactions
+
+// /data/matches - same as /matches
+app.get("/data/matches", async (req, res) => {
+  try {
+    const matches = await prisma.match.findMany({
+      where: {
+        status: "waiting",
+        opponentId: null,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+    
+    const matchesWithCreators = await Promise.all(
+      matches.map(async (match) => {
+        try {
+          const creator = await prisma.user.findUnique({
+            where: { id: match.creatorId },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          });
+          return {
+            ...match,
+            creator: creator || null,
+          };
+        } catch (err) {
+          return {
+            ...match,
+            creator: null,
+          };
+        }
+      })
+    );
+    
+    res.json(matchesWithCreators);
+  } catch (error: any) {
+    console.error("Matches error:", error);
+    res.json([]); // Return empty array instead of error
+  }
+});
+
+// /data/profile - same as /profile but with different response format
+app.get("/data/profile", authMiddleware, async (req: AuthedRequest, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    const userId = req.user.id;
+
+    // Get user with minimal data first
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        kycVerified: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Get wallet - ensure it exists
+    let wallet;
+    try {
+      wallet = await getWallet(userId);
+    } catch (walletError: any) {
+      console.error("Error getting wallet:", walletError);
+      wallet = { balance: 0, lockedBalance: 0 } as any;
+    }
+
+    // Get matches separately to avoid relation issues
+    let matchesCreated = [];
+    let matchesJoined = [];
+    try {
+      matchesCreated = await prisma.match.findMany({
+        where: {
+          creatorId: userId,
+          status: "completed",
+        },
+        select: {
+          id: true,
+          winnerId: true,
+        },
+      });
+
+      matchesJoined = await prisma.match.findMany({
+        where: {
+          opponentId: userId,
+          status: "completed",
+        },
+        select: {
+          id: true,
+          winnerId: true,
+        },
+      });
+    } catch (matchError: any) {
+      console.warn("Matches fetch failed:", matchError.message);
+    }
+
+    const allMatches = [...matchesCreated, ...matchesJoined];
+    const wins = allMatches.filter(m => m.winnerId === userId).length;
+    const losses = allMatches.filter(m => m.winnerId && m.winnerId !== userId).length;
+    const draws = allMatches.filter(m => !m.winnerId).length;
+
+    // Get transactions
+    let transactions = [];
+    try {
+      transactions = await prisma.transaction.findMany({
+        where: { userId: userId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: {
+          id: true,
+          amount: true,
+          type: true,
+          description: true,
+          createdAt: true,
+        },
+      });
+    } catch (txError: any) {
+      console.warn("Transactions fetch failed:", txError.message);
+    }
+
+    const totalEarnings = transactions
+      .filter(t => t.type === "match_win" || t.type === "deposit" || t.type === "DEPOSIT")
+      .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
+    
+    const totalSpent = transactions
+      .filter(t => t.type === "match_loss" || t.type === "withdraw" || t.type === "WITHDRAW")
+      .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
+
+    const profileData = {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        kycVerified: user.kycVerified,
+        createdAt: user.createdAt,
+      },
+      wallet: {
+        balance: Number(wallet?.balance || 0),
+        lockedBalance: Number(wallet?.lockedBalance || 0),
+      },
+      stats: {
+        totalMatches: allMatches.length,
+        wins,
+        losses,
+        draws,
+        totalEarnings,
+        totalSpent,
+        netEarnings: totalEarnings - totalSpent,
+      },
+      recentTransactions: transactions.map(t => ({
+        id: t.id,
+        amount: Number(t.amount),
+        type: t.type,
+        description: t.description || null,
+        createdAt: t.createdAt,
+      })),
+    };
+
+    res.json(profileData);
+  } catch (error: any) {
+    console.error("Profile error:", error);
+    res.status(500).json({ error: error.message || "Failed to get profile" });
+  }
+});
+
+// /data/transactions - same as /transactions
+app.get("/data/transactions", authMiddleware, async (req: AuthedRequest, res) => {
+  try {
+    const transactions = await prisma.transaction.findMany({
+      where: { userId: req.user!.id },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+    res.json(transactions);
+  } catch (error: any) {
+    console.error("Transactions error:", error);
+    res.json([]); // Return empty array instead of error
+  }
+});
+
 // Debug endpoint to check match status
 app.get("/debug/match/:matchId", authMiddleware, async (req: AuthedRequest, res) => {
   try {
