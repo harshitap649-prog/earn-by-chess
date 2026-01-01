@@ -1,9 +1,10 @@
 // Combined data routes - matches, transactions, profile
+// Handles /api/data/matches, /api/data/profile, /api/data/transactions
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { prisma } from '../db';
-import { getWallet } from '../services/wallet';
-import { verifyAuth, sendUnauthorized } from './_shared/auth';
-import { setCorsHeaders, handleOptions } from './_shared/cors';
+import { prisma } from '../../db';
+import { getWallet } from '../../services/wallet';
+import { verifyAuth, sendUnauthorized } from '../_shared/auth';
+import { setCorsHeaders, handleOptions } from '../_shared/cors';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCorsHeaders(res);
@@ -12,40 +13,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleOptions(res);
   }
 
-  // Get the path from the request
-  // On Vercel, when calling /api/data/profile, the req.url will be '/data/profile' (without /api prefix)
-  // We need to check both the full path and the query string
-  const fullPath = req.url || '';
-  const path = fullPath.split('?')[0] || '';
+  // Get the slug from the route parameter
+  // /api/data/profile -> slug = 'profile'
+  // /api/data/matches -> slug = 'matches'
+  // /api/data/transactions -> slug = 'transactions'
+  const slug = req.query.slug as string;
   
-  // Also check if there's a query parameter that might indicate the route
-  // For example, if someone calls /api/data?type=profile
-  const routeType = (req.query?.type as string) || '';
-  
-  // Check for matches, transactions, or profile in the path
-  // Support multiple path formats:
-  // - /data/profile (Vercel format)
-  // - /profile (direct)
-  // - /data/matches
-  // - /matches
-  const isMatches = path.includes('/matches') || 
-                    path.endsWith('/matches') || 
-                    path.endsWith('/data/matches') ||
-                    routeType === 'matches';
-  const isTransactions = path.includes('/transactions') || 
-                        path.endsWith('/transactions') || 
-                        path.endsWith('/data/transactions') ||
-                        routeType === 'transactions';
-  const isProfile = path.includes('/profile') || 
-                   path.endsWith('/profile') || 
-                   path.endsWith('/data/profile') ||
-                   routeType === 'profile';
-  
-  // Debug logging (always log to help diagnose issues)
-  console.log('API Data Route - Full URL:', fullPath, 'Path:', path, 'isProfile:', isProfile, 'isMatches:', isMatches, 'isTransactions:', isTransactions);
+  console.log('API Data Route - Slug:', slug);
 
   // Matches (public, no auth needed)
-  if (isMatches && req.method === 'GET') {
+  if (slug === 'matches' && req.method === 'GET') {
     try {
       const matches = await prisma.match.findMany({
         where: {
@@ -74,6 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               creator: creator || null,
             };
           } catch (err) {
+            console.error("Error fetching creator for match (DB issue?):", err);
             return {
               ...match,
               creator: null,
@@ -84,43 +62,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       return res.json(matchesWithCreators);
     } catch (error: any) {
-      console.error('Matches error:', error);
-      // Return empty array instead of error if database fails
-      if (error.message?.includes('connect') || error.message?.includes('DATABASE_URL')) {
-        return res.json([]);
-      }
-      return res.status(500).json({ error: error.message || 'Failed to get matches' });
+      console.error('Matches error (DB issue?):', error);
+      // Return empty array on DB error
+      return res.status(200).json([]);
     }
   }
 
   // Transactions (requires auth)
-  if (isTransactions && req.method === 'GET') {
+  if (slug === 'transactions' && req.method === 'GET') {
     try {
       const user = await verifyAuth(req);
       if (!user) {
         return sendUnauthorized(res);
       }
 
-      try {
-        const transactions = await prisma.transaction.findMany({
-          where: { userId: user.id },
-          orderBy: { createdAt: 'desc' },
-          take: 50,
-        });
+      const transactions = await prisma.transaction.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      });
 
-        return res.json(transactions);
-      } catch (dbError: any) {
-        console.warn('Database error in transactions, returning empty array:', dbError.message);
-        return res.json([]);
-      }
+      return res.json(transactions);
     } catch (error: any) {
-      console.error('Transactions error:', error);
-      return res.status(500).json({ error: error.message || 'Failed to get transactions' });
+      console.error('Transactions error (DB issue?):', error);
+      // Return empty array on DB error
+      return res.status(200).json([]);
     }
   }
 
   // Profile (requires auth)
-  if (isProfile && req.method === 'GET') {
+  if (slug === 'profile' && req.method === 'GET') {
     try {
       const user = await verifyAuth(req);
       if (!user) {
