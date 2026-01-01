@@ -24,8 +24,12 @@ const getSocketUrl = () => {
 export const API_URL = getApiUrl()
 export const SOCKET_URL = getSocketUrl()
 
-// For API calls, use relative path if on same domain, or full URL if different
-export const API_BASE_URL = import.meta.env.VITE_API_URL 
+// For API calls, use relative path if on same domain (Vercel), or full URL if different
+// On Vercel, API routes are on the same domain, so use relative paths
+// If VITE_API_URL is set and we're not on Vercel, use the full URL
+export const API_BASE_URL = import.meta.env.VITE_API_URL && 
+  !import.meta.env.VITE_API_URL.includes('vercel.app') &&
+  import.meta.env.MODE === 'production'
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api'
 
