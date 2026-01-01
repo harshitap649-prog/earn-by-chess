@@ -13,20 +13,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Get the path from the request
-  // On Vercel, the path will be like '/data/profile' (without /api prefix)
-  // The query might be in req.query or req.url
+  // On Vercel, when calling /api/data/profile, the req.url will be '/data/profile' (without /api prefix)
+  // We need to check both the full path and the query string
   const fullPath = req.url || '';
   const path = fullPath.split('?')[0] || '';
   
-  // Check for matches, transactions, or profile in the path
-  const isMatches = path.includes('/matches') || path.endsWith('/matches') || path.endsWith('/data/matches');
-  const isTransactions = path.includes('/transactions') || path.endsWith('/transactions') || path.endsWith('/data/transactions');
-  const isProfile = path.includes('/profile') || path.endsWith('/profile') || path.endsWith('/data/profile');
+  // Also check if there's a query parameter that might indicate the route
+  // For example, if someone calls /api/data?type=profile
+  const routeType = (req.query?.type as string) || '';
   
-  // Debug logging (only in development)
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('API Data Route - Path:', path, 'isProfile:', isProfile, 'isMatches:', isMatches, 'isTransactions:', isTransactions);
-  }
+  // Check for matches, transactions, or profile in the path
+  // Support multiple path formats:
+  // - /data/profile (Vercel format)
+  // - /profile (direct)
+  // - /data/matches
+  // - /matches
+  const isMatches = path.includes('/matches') || 
+                    path.endsWith('/matches') || 
+                    path.endsWith('/data/matches') ||
+                    routeType === 'matches';
+  const isTransactions = path.includes('/transactions') || 
+                        path.endsWith('/transactions') || 
+                        path.endsWith('/data/transactions') ||
+                        routeType === 'transactions';
+  const isProfile = path.includes('/profile') || 
+                   path.endsWith('/profile') || 
+                   path.endsWith('/data/profile') ||
+                   routeType === 'profile';
+  
+  // Debug logging (always log to help diagnose issues)
+  console.log('API Data Route - Full URL:', fullPath, 'Path:', path, 'isProfile:', isProfile, 'isMatches:', isMatches, 'isTransactions:', isTransactions);
 
   // Matches (public, no auth needed)
   if (isMatches && req.method === 'GET') {
