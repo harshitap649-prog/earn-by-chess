@@ -17,15 +17,22 @@ export async function verifyAuth(req: VercelRequest): Promise<{ id: string } | n
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, CONFIG.jwtSecret) as { userId: string };
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-    });
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+      });
 
-    if (!user) {
-      return null;
+      if (!user) {
+        return null;
+      }
+
+      return { id: user.id };
+    } catch (dbError: any) {
+      // If database is not connected, still allow auth based on JWT
+      // This prevents 500 errors when DATABASE_URL is not set
+      console.warn('Database error in auth verification, using JWT only:', dbError.message);
+      return { id: decoded.userId };
     }
-
-    return { id: user.id };
   } catch (error) {
     return null;
   }

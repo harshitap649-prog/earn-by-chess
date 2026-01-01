@@ -29,11 +29,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     } catch (dbError: any) {
       console.error('Database error in wallet:', dbError);
-      // Return default values if database fails
-      return res.json({
-        balance: 0,
-        lockedBalance: 0,
-      });
+      // If database is not connected, return default values instead of error
+      if (dbError.message?.includes('connect') || dbError.message?.includes('DATABASE_URL')) {
+        console.warn('Database not connected, returning default wallet values');
+        return res.json({
+          balance: 0,
+          lockedBalance: 0,
+        });
+      }
+      // For other errors, still return 500
+      throw dbError;
     }
   } catch (error: any) {
     console.error('Wallet error:', error);
