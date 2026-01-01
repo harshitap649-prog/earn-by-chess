@@ -1,3 +1,4 @@
+# Only ignore server-side files, NOT client folder
 server.ts
 services/
 sockets/
@@ -6,11 +7,7 @@ prisma/
 db.ts
 config.ts
 load-env.ts
-tsconfig.json
-package.json
-package-lock.json
-*.md
-!client/README.md
 start-*.bat
-dist/
+# DO NOT ignore client folder - it's needed for build!
+# DO NOT ignore package.json files - needed for build!
 
