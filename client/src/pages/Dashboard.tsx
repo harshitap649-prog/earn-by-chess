@@ -86,8 +86,17 @@ export default function Dashboard() {
       ])
       setWallet(walletRes.data)
       setMatches(matchesRes.data)
+      setError('') // Clear any previous errors
     } catch (err: any) {
       console.error('Failed to load data:', err)
+      // Show helpful error message
+      if (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error')) {
+        setError('Cannot connect to server. Please check if the backend is deployed and running.')
+      } else if (err.response?.status === 404) {
+        setError('Backend API not found. Please deploy the backend server.')
+      } else {
+        setError(err.response?.data?.error || 'Failed to load data. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
@@ -142,6 +151,15 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
       <Navigation />
+      {error && (
+        <div className="error" style={{ margin: '20px', padding: '20px', background: 'rgba(239, 68, 68, 0.1)', border: '2px solid #ef4444', borderRadius: '12px', color: '#ef4444' }}>
+          <h3 style={{ marginBottom: '10px' }}>⚠️ Connection Error</h3>
+          <p>{error}</p>
+          <p style={{ marginTop: '10px', fontSize: '14px', opacity: 0.9 }}>
+            If you're the site owner, please deploy the backend server. See deployment guides in the repository.
+          </p>
+        </div>
+      )}
       
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
