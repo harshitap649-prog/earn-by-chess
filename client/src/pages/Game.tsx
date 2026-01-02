@@ -690,9 +690,6 @@ export default function Game() {
             }, 200) // Small delay for UI update
           }
         } else {
-          // For free play, always allow moves
-          setIsPlayerTurn(true)
-        } else {
           // For paid matches, check if it's player's turn
           setIsPlayerTurn(
             (currentTurn === 'w' && playerColor === 'white') || 
