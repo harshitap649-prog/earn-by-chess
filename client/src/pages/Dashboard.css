@@ -892,157 +892,461 @@
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .dashboard-content {
-    padding: 20px 15px;
+    padding: 12px 10px;
   }
 
   .wallet-card {
-    padding: 20px;
-    margin-bottom: 20px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: 12px;
   }
 
   .wallet-card h2 {
-    font-size: 20px;
+    font-size: 18px;
+    margin-bottom: 12px;
   }
 
   .wallet-info {
-    gap: 12px;
+    gap: 10px;
   }
 
   .wallet-item {
-    padding: 14px 16px;
-    flex-direction: column;
-    align-items: flex-start;
+    padding: 12px 14px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     gap: 8px;
+    border-radius: 10px;
+  }
+
+  .wallet-item .label {
+    font-size: 12px;
   }
 
   .wallet-item .value {
-    font-size: 20px;
+    font-size: 16px;
   }
 
   .wallet-item.total .value {
-    font-size: 24px;
+    font-size: 20px;
   }
 
   .wallet-actions {
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 16px;
   }
 
   .wallet-action-btn {
-    padding: 14px;
-    font-size: 15px;
+    padding: 12px;
+    font-size: 14px;
+    border-radius: 10px;
   }
 
   .play-free-section {
-    padding: 25px 20px;
-    margin-bottom: 25px;
+    padding: 20px 16px;
+    margin-bottom: 20px;
+    border-radius: 16px;
+  }
+
+  .section-header {
+    margin-bottom: 20px;
   }
 
   .section-header h2 {
-    font-size: 24px;
+    font-size: 20px;
+    margin-bottom: 8px;
   }
 
   .section-subtitle {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .play-free-grid {
     grid-template-columns: 1fr;
-    gap: 18px;
+    gap: 14px;
   }
 
   .play-free-card {
-    padding: 20px;
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .play-free-header {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+  }
+
+  .play-free-label {
+    font-size: 16px;
+  }
+
+  .play-free-entry {
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 16px;
+  }
+
+  .play-free-prize {
+    margin: 16px 0;
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .play-free-amount {
+    font-size: 32px;
+    margin-bottom: 6px;
+  }
+
+  .play-free-prize-label {
+    font-size: 13px;
+  }
+
+  .free-prize .play-free-amount {
+    font-size: 40px;
+    margin-bottom: 8px;
+  }
+
+  .free-play-desc {
+    font-size: 12px;
+    margin-top: 6px;
+  }
+
+  .play-free-btn {
+    font-size: 14px;
+    padding: 12px;
+    margin-top: 14px;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
   }
 
   .match-section {
-    padding: 20px;
-    margin-bottom: 20px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: 14px;
   }
 
   .match-header {
     flex-direction: column;
     align-items: flex-start;
+    margin-bottom: 16px;
   }
 
   .match-header h2 {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .match-types-grid {
     grid-template-columns: 1fr;
-    gap: 15px;
-  }
-
-  .match-type-card {
-    padding: 20px;
-  }
-
-  .available-matches-section {
-    margin-top: 25px;
-    padding-top: 20px;
-  }
-
-  .available-matches-section h3 {
-    font-size: 18px;
-  }
-
-  .matches-list {
     gap: 12px;
   }
 
+  .match-type-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .match-type-header {
+    margin-bottom: 14px;
+  }
+
+  .match-type-label {
+    font-size: 15px;
+  }
+
+  .match-type-badge {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .match-type-prize {
+    margin: 16px 0;
+    padding: 16px;
+  }
+
+  .prize-amount {
+    font-size: 28px;
+    margin-bottom: 6px;
+  }
+
+  .prize-label {
+    font-size: 12px;
+  }
+
+  .match-type-details {
+    margin-bottom: 14px;
+    padding: 12px;
+  }
+
+  .detail-item {
+    font-size: 11px;
+    gap: 3px;
+  }
+
+  .detail-item span:first-child {
+    font-size: 11px;
+  }
+
+  .detail-item span:last-child {
+    font-size: 13px;
+  }
+
+  .match-type-btn {
+    padding: 12px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  .available-matches-section {
+    margin-top: 20px;
+    padding-top: 16px;
+  }
+
+  .available-matches-section h3 {
+    font-size: 16px;
+    margin-bottom: 14px;
+  }
+
+  .matches-list {
+    gap: 10px;
+  }
+
   .match-card {
-    padding: 15px;
+    padding: 14px;
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
     align-items: flex-start;
+    border-radius: 10px;
   }
 
   .match-details {
     width: 100%;
+    gap: 10px;
+  }
+
+  .match-creator {
+    font-size: 14px;
+  }
+
+  .match-prize-info {
+    gap: 12px;
+    flex-direction: column;
+  }
+
+  .match-prize-info div {
+    font-size: 12px;
+  }
+
+  .match-prize-info strong {
+    font-size: 13px;
   }
 
   .join-btn {
     width: 100%;
-    padding: 14px;
+    padding: 12px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+
+  .play-action-btn {
+    font-size: 14px !important;
+    padding: 12px !important;
+  }
+
+  .no-matches {
+    padding: 24px 16px;
+    font-size: 14px;
   }
 
   .modal-content {
-    margin: 20px;
-    max-width: calc(100% - 40px);
+    margin: 16px;
+    max-width: calc(100% - 32px);
+    border-radius: 12px;
   }
 
   .modal-header,
   .modal-body,
   .modal-footer {
-    padding: 16px;
+    padding: 14px;
+  }
+
+  .modal-header h3 {
+    font-size: 18px;
+  }
+
+  .modal-body p {
+    font-size: 14px;
+  }
+
+  .modal-subtext {
+    font-size: 12px !important;
   }
 
   .modal-footer {
     flex-direction: column;
+    gap: 10px;
   }
 
   .modal-btn {
     width: 100%;
+    padding: 12px;
+    font-size: 14px;
   }
 }
 
 /* Small Mobile Devices */
 @media (max-width: 480px) {
   .dashboard-content {
-    padding: 15px 10px;
+    padding: 10px 8px;
+  }
+
+  .wallet-card {
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+
+  .wallet-card h2 {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+
+  .wallet-item {
+    padding: 10px 12px;
+  }
+
+  .wallet-item .label {
+    font-size: 11px;
+  }
+
+  .wallet-item .value {
+    font-size: 15px;
+  }
+
+  .wallet-item.total .value {
+    font-size: 18px;
+  }
+
+  .wallet-action-btn {
+    padding: 11px;
+    font-size: 13px;
+  }
+
+  .play-free-section {
+    padding: 16px 12px;
+    margin-bottom: 16px;
+  }
+
+  .section-header h2 {
+    font-size: 18px;
+  }
+
+  .section-subtitle {
+    font-size: 12px;
+  }
+
+  .play-free-card {
+    padding: 14px;
+  }
+
+  .play-free-label {
+    font-size: 15px;
+  }
+
+  .play-free-entry {
+    padding: 5px 10px;
+    font-size: 12px;
   }
 
   .play-free-amount {
+    font-size: 28px;
+  }
+
+  .free-prize .play-free-amount {
     font-size: 36px;
   }
 
-  .prize-amount {
-    font-size: 32px;
+  .play-free-prize-label {
+    font-size: 12px;
   }
 
   .play-free-btn {
-    font-size: 16px;
+    font-size: 13px;
+    padding: 11px;
+  }
+
+  .match-section {
     padding: 14px;
+  }
+
+  .match-header h2 {
+    font-size: 16px;
+  }
+
+  .match-type-card {
+    padding: 14px;
+  }
+
+  .match-type-label {
+    font-size: 14px;
+  }
+
+  .prize-amount {
+    font-size: 24px;
+  }
+
+  .available-matches-section h3 {
+    font-size: 15px;
+  }
+
+  .match-card {
+    padding: 12px;
+  }
+
+  .match-creator {
+    font-size: 13px;
+  }
+
+  .match-prize-info div {
+    font-size: 11px;
+  }
+
+  .join-btn {
+    padding: 11px;
+    font-size: 13px;
+  }
+}
+
+/* Extra Small Mobile Devices */
+@media (max-width: 360px) {
+  .dashboard-content {
+    padding: 8px 6px;
+  }
+
+  .wallet-card,
+  .play-free-section,
+  .match-section {
+    padding: 12px;
+  }
+
+  .wallet-card h2,
+  .section-header h2,
+  .match-header h2 {
+    font-size: 15px;
+  }
+
+  .play-free-amount {
+    font-size: 24px;
+  }
+
+  .prize-amount {
+    font-size: 20px;
+  }
+
+  .play-free-btn,
+  .match-type-btn,
+  .join-btn {
+    font-size: 12px;
+    padding: 10px;
   }
 }

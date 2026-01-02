@@ -6,6 +6,7 @@ import { io, Socket } from 'socket.io-client'
 import api from '../services/api'
 import ChessBoard from '../components/ChessBoard'
 import Navigation from '../components/Navigation'
+import { getComputerMove } from '../utils/computerPlayer'
 import './Game.css'
 
 interface Match {
@@ -62,7 +63,63 @@ export default function Game() {
   }, [game])
 
   useEffect(() => {
-    if (!matchId || !user) return
+    if (!matchId) {
+      // If no matchId, redirect to dashboard
+      navigate('/dashboard')
+      return
+    }
+
+    // For free play matches (practice mode), allow loading even without user
+    // Check if it's a practice match ID
+    const isPracticeMatch = matchId.startsWith('practice-')
+    
+    if (isPracticeMatch) {
+      // Practice mode - don't need user or API
+      // For free play, automatically add computer opponent for AI
+      console.log('🎮 Practice mode detected - loading without API')
+      const isVercel = window.location.hostname.includes('vercel.app')
+      const defaultMatch: Match = {
+        id: matchId,
+        creatorId: user?.id || 'practice-user',
+        opponentId: isVercel ? 'computer-ai' : null, // Add computer opponent on Vercel for AI
+        entryFee: 0,
+        status: 'started',
+        creator: { name: user?.name || 'You' },
+      }
+      setMatch(defaultMatch)
+      setPlayerColor('white')
+      setWaitingForOpponent(false)
+      setIsPlayerTurn(true)
+      setLoading(false)
+      if (isVercel) {
+        console.log('🤖 Computer AI enabled for free play on Vercel')
+      }
+      return
+    }
+
+    // For real matches, wait for user but with timeout
+    if (!user) {
+      // Wait a bit for auth to load, but don't wait forever
+      const timeout = setTimeout(() => {
+        console.warn('⚠️ User not loaded after timeout, allowing practice mode')
+        // Allow practice mode even without user
+        const defaultMatch: Match = {
+          id: matchId,
+          creatorId: 'unknown',
+          opponentId: null,
+          entryFee: 0,
+          status: 'started',
+          creator: { name: 'Guest' },
+        }
+        setMatch(defaultMatch)
+        setPlayerColor('white')
+        setWaitingForOpponent(false)
+        setIsPlayerTurn(true)
+        setLoading(false)
+      }, 3000) // Wait 3 seconds for auth
+
+      return () => clearTimeout(timeout)
+    }
 
     loadMatch()
 
@@ -71,14 +128,41 @@ export default function Game() {
         socketRef.current.disconnect()
       }
     }
-  }, [matchId, user?.id])
+  }, [matchId, user?.id, navigate])
 
   const loadMatch = async () => {
+    let timeoutId: NodeJS.Timeout | null = null
+    
     try {
       setLoading(true)
       console.log('Loading match:', matchId)
       
+      // Add timeout to prevent infinite loading
+      timeoutId = setTimeout(() => {
+        console.warn('⚠️ API request timeout - enabling practice mode')
+        const defaultMatch: Match = {
+          id: matchId || 'unknown',
+          creatorId: user?.id || 'unknown',
+          opponentId: null,
+          entryFee: 0,
+          status: 'started',
+          creator: { name: user?.name || 'You' },
+        }
+        setMatch(defaultMatch)
+        setPlayerColor('white')
+        setWaitingForOpponent(false)
+        setIsPlayerTurn(true)
+        setLoading(false)
+      }, 10000) // 10 second timeout
+      
       const response = await api.get(`/match/${matchId}`)
+      
+      // Clear timeout if request succeeded
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+        timeoutId = null
+      }
+      
       const matchData = response.data
       
       console.log('Match data received:', matchData)
@@ -138,8 +222,25 @@ export default function Game() {
         const isVercel = window.location.hostname.includes('vercel.app')
         
         if (isVercel) {
-          console.log('⚠️ Running on Vercel - Socket.io disabled. Game will work in practice mode.')
-          // Don't initialize Socket.io on Vercel
+          console.log('⚠️ Running on Vercel - Socket.io disabled. Using client-side AI.')
+          // For free play matches on Vercel, enable computer opponent automatically
+          if (isFreePlay) {
+            // If no computer opponent, add one for AI
+            if (!matchData.opponentId) {
+              const matchWithAI: Match = {
+                ...matchData,
+                opponentId: 'computer-ai'
+              }
+              setMatch(matchWithAI)
+              console.log('🤖 Computer AI enabled for free play on Vercel')
+            }
+            setWaitingForOpponent(false)
+            setIsPlayerTurn(true)
+            setLoading(false)
+            console.log('✅ Free play match on Vercel - board ready with AI!')
+            return
+          }
+          // For paid matches on Vercel, still try to show board but without socket
           setLoading(false)
           return
         }
@@ -352,43 +453,55 @@ export default function Game() {
         setLoading(false)
       }
     } catch (err: any) {
-      console.error('Failed to load match:', err)
-      console.error('Error details:', {
-        message: err.message,
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        url: err.config?.url,
-        data: err.response?.data,
-      })
+      // Clear timeout on error
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+        timeoutId = null
+      }
+      // Safely extract error information
+      const errorMessage = err?.message || 'Unknown error';
+      const errorStatus = err?.response?.status;
+      const errorData = err?.response?.data;
+      
+      // Log error details safely (convert objects to strings)
+      console.error('Failed to load match:', errorMessage);
+      if (errorStatus) {
+        console.error('Error status:', errorStatus);
+      }
+      if (errorData) {
+        const errorDataString = typeof errorData === 'string' ? errorData : JSON.stringify(errorData);
+        console.error('Error data:', errorDataString);
+      }
       
       // If 404, navigate away
-      if (err.response?.status === 404) {
-        console.error('Match not found, redirecting to dashboard')
-        navigate('/dashboard')
-        return
+      if (errorStatus === 404) {
+        console.error('Match not found, redirecting to dashboard');
+        navigate('/dashboard');
+        return;
       }
       
       // For other errors (network, 500, etc.), show a default match state
       // This allows the game to still render in practice mode
-      console.warn('API error, but allowing game to render in practice mode')
+      console.warn('API error, but allowing game to render in practice mode');
       const defaultMatch: Match = {
         id: matchId || 'unknown',
         creatorId: user?.id || 'unknown',
         opponentId: null,
         entryFee: 0, // Default to free play
-        status: 'waiting',
+        status: 'started', // Set to started so board is immediately available
         creator: { name: user?.name || 'You' },
-      }
-      setMatch(defaultMatch)
-      setPlayerColor('white')
-      setWaitingForOpponent(false) // Allow practice mode
-      setIsPlayerTurn(true) // Allow moves
+      };
+      setMatch(defaultMatch);
+      setPlayerColor('white');
+      setWaitingForOpponent(false); // Allow practice mode
+      setIsPlayerTurn(true); // Allow moves
       
       // Don't try to connect Socket.io if API failed
       // Game will work in practice mode without Socket.io
-      console.log('⚠️ Socket.io disabled due to API error. Game will work in practice mode only.')
+      console.log('⚠️ Socket.io disabled due to API error. Game will work in practice mode only.');
+      console.log('✅ Free play mode enabled - chess board will be visible!');
       
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -399,8 +512,9 @@ export default function Game() {
       setGameStatus(winner === playerColor ? 'Checkmate! You Won! 🎉' : 'Checkmate! You Lost')
       setIsPlayerTurn(false)
       
-      if (socketRef.current && match) {
-        const winnerId = winnerColor === 'w' ? match.creatorId : match.opponentId
+      const currentMatch = match || displayMatch;
+      if (socketRef.current && currentMatch) {
+        const winnerId = winnerColor === 'w' ? currentMatch.creatorId : currentMatch.opponentId
         socketRef.current.emit('game-over', {
           matchId,
           winnerId,
@@ -414,7 +528,8 @@ export default function Game() {
       setGameStatus(`${drawReason}! Entry fees will be refunded`)
       setIsPlayerTurn(false)
       
-      if (socketRef.current && match) {
+      const currentMatch = match || displayMatch;
+      if (socketRef.current && currentMatch) {
         socketRef.current.emit('game-over', {
           matchId,
           winnerId: '',
@@ -430,14 +545,16 @@ export default function Game() {
   }
 
   const handleMove = (move: { from: string; to: string; promotion?: string }) => {
-    const isFreePlay = match ? Number(match.entryFee) === 0 : false
-    const isPracticeMode = isFreePlay && !match?.opponentId
-    const hasComputerOpponent = isFreePlay && match?.opponentId
+    const currentMatch = match || displayMatch;
+    const isFreePlay = currentMatch ? Number(currentMatch.entryFee) === 0 : false
+    const isPracticeMode = isFreePlay && !currentMatch?.opponentId
+    const hasComputerOpponent = isFreePlay && currentMatch?.opponentId
     const isVercel = window.location.hostname.includes('vercel.app')
     
     // For free play matches, always allow moves (practice mode works without Socket.io)
     if (isFreePlay) {
-      // Allow moves in free play mode - no socket required
+      // Always allow moves in free play mode - no socket required
+      // On Vercel, free play works perfectly without socket
     } else {
       // For paid matches, check turn, socket, and opponent
       if (!isPlayerTurn || waitingForOpponent) return
@@ -466,10 +583,96 @@ export default function Game() {
         // In practice mode (free play without opponent), always allow moves (user plays both sides)
         if (isPracticeMode) {
           setIsPlayerTurn(true) // Always allow moves in practice mode
-        } else if (hasComputerOpponent) {
-          // For computer matches, disable player turn after move (wait for computer)
-          // But on Vercel, computer won't work, so keep allowing moves
-          setIsPlayerTurn(isVercel ? true : false)
+        } else if (hasComputerOpponent || (isFreePlay && !isPracticeMode)) {
+          // For computer matches OR free play matches, use AI
+          setIsPlayerTurn(false)
+          
+          // Always use client-side AI (works everywhere)
+          console.log('🤖 Using client-side AI for computer opponent')
+          
+          // Calculate computer move with timeout protection (increased for deeper search)
+          const moveTimeout = setTimeout(() => {
+            console.warn('⚠️ Computer move calculation timeout - using quick fallback')
+            // Quick fallback: pick best capture or first move
+            try {
+              const fallbackGame = new Chess(newGame.fen())
+              const moves = fallbackGame.moves({ verbose: true })
+              if (moves.length > 0) {
+                // Find best capture
+                let bestMove = moves[0]
+                for (const move of moves) {
+                  if (move.captured) {
+                    bestMove = move
+                    break
+                  }
+                }
+                const result = fallbackGame.move(bestMove)
+                if (result) {
+                  setGame(fallbackGame)
+                  setMoveHistory(fallbackGame.history())
+                  setIsPlayerTurn(true)
+                  updateGameStatus(fallbackGame)
+                  console.log('✅ Fallback move applied:', result)
+                }
+              }
+            } catch (e) {
+              console.error('Fallback failed:', e)
+              setIsPlayerTurn(true)
+            }
+          }, 15000) // 15 second timeout (increased for deeper PRO level search)
+          
+          // Use requestAnimationFrame to prevent blocking
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              try {
+                const startTime = Date.now()
+                console.log('🤖 Starting AI calculation...')
+                const computerMove = getComputerMove(newGame)
+                const calcTime = Date.now() - startTime
+                console.log(`⏱️ Move calculation took ${calcTime}ms`)
+                
+                clearTimeout(moveTimeout)
+                
+                if (computerMove) {
+                  console.log('🤖 Computer move calculated:', computerMove)
+                  const computerGame = new Chess(newGame.fen())
+                  
+                  // Try standard move format first
+                  let computerMoveResult = computerGame.move({
+                    from: computerMove.from,
+                    to: computerMove.to,
+                    promotion: computerMove.promotion
+                  })
+                  
+                  if (!computerMoveResult) {
+                    // Try alternative format
+                    computerGame.load(newGame.fen())
+                    computerMoveResult = computerGame.move(`${computerMove.from}${computerMove.to}${computerMove.promotion ? computerMove.promotion : ''}`)
+                  }
+                  
+                  if (computerMoveResult) {
+                    console.log('✅ Computer move applied:', computerMoveResult)
+                    setGame(computerGame)
+                    setMoveHistory(computerGame.history())
+                    setIsPlayerTurn(true) // Player's turn again
+                    updateGameStatus(computerGame)
+                  } else {
+                    console.error('❌ Failed to apply computer move:', computerMove)
+                    console.error('   Current FEN:', newGame.fen())
+                    console.error('   Available moves:', computerGame.moves({ verbose: true }).slice(0, 5))
+                    setIsPlayerTurn(true) // Allow player to continue
+                  }
+                } else {
+                  console.warn('⚠️ No computer move available')
+                  setIsPlayerTurn(true)
+                }
+              } catch (error) {
+                console.error('❌ Error calculating computer move:', error)
+                clearTimeout(moveTimeout)
+                setIsPlayerTurn(true) // Allow player to continue
+              }
+            }, 100) // Small delay
+          })
         } else if (isFreePlay) {
           // For free play, always allow moves
           setIsPlayerTurn(true)
@@ -496,10 +699,12 @@ export default function Game() {
           } else {
             console.warn('⚠️ Socket not connected. Move saved locally only.');
             // Still update local game state even if socket isn't connected
-            if (hasComputerOpponent) {
+            if (hasComputerOpponent && !isVercel) {
               console.warn('⚠️ Cannot connect to server. Computer moves will not work.');
             }
           }
+        } else if (isVercel && hasComputerOpponent) {
+          console.log('📤 Move made (Vercel - client-side AI will respond)');
         } else if (isVercel) {
           console.log('📤 Move made (Vercel - Socket.io disabled, move saved locally)');
         } else {
@@ -515,6 +720,33 @@ export default function Game() {
   useEffect(() => {
     setMoveHistory(game.history())
   }, [game])
+
+  // Safety timeout - if loading takes too long, show the board anyway
+  useEffect(() => {
+    if (loading) {
+      const safetyTimeout = setTimeout(() => {
+        console.warn('⚠️ Loading timeout - forcing board to render')
+        setLoading(false)
+        // Set default match if none exists
+        if (!match) {
+          const defaultMatch: Match = {
+            id: matchId || 'practice',
+            creatorId: user?.id || 'unknown',
+            opponentId: null,
+            entryFee: 0,
+            status: 'started',
+            creator: { name: user?.name || 'You' },
+          }
+          setMatch(defaultMatch)
+          setPlayerColor('white')
+          setWaitingForOpponent(false)
+          setIsPlayerTurn(true)
+        }
+      }, 5000) // 5 second safety timeout
+      
+      return () => clearTimeout(safetyTimeout)
+    }
+  }, [loading, match, matchId, user])
 
   if (loading) {
     return (
@@ -534,48 +766,25 @@ export default function Game() {
     )
   }
 
-  if (!match) {
-    return (
-      <div className="game-container">
-        <Navigation />
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          minHeight: '60vh',
-          color: 'var(--text-primary)',
-          padding: '20px',
-          textAlign: 'center'
-        }}>
-          <h2>Match not found</h2>
-          <p>Unable to load match data. You can still practice in free play mode.</p>
-          <button 
-            onClick={() => navigate('/dashboard')}
-            style={{
-              marginTop: '20px',
-              padding: '12px 24px',
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-primary)',
-              borderRadius: '8px',
-              cursor: 'pointer'
-            }}
-          >
-            Go to Dashboard
-          </button>
-        </div>
-      </div>
-    )
-  }
+  // Always show the chess board, even if match data failed to load
+  // Create a default match if none exists (for practice mode)
+  // This ensures the board always renders, preventing blank screens on Vercel
+  const displayMatch: Match = match || {
+    id: matchId || 'practice',
+    creatorId: user?.id || 'unknown',
+    opponentId: null,
+    entryFee: 0,
+    status: 'started',
+    creator: { name: user?.name || 'You' },
+  };
 
-  const entryFee = Number(match.entryFee)
+  const entryFee = Number(displayMatch.entryFee)
   const { winnerPrize, platformProfit, totalPool } = calculatePrize(entryFee)
   const isFreePlay = entryFee === 0
-  const hasComputerOpponent = isFreePlay && match.opponentId
-  const opponentName = match.creatorId === user?.id 
-    ? (hasComputerOpponent ? '🤖 Chess AI' : (match.opponent?.name || (isFreePlay ? 'Practice Mode (Play Alone)' : 'Waiting for opponent...')))
-    : match.creator?.name || 'Unknown'
+  const hasComputerOpponent = isFreePlay && displayMatch.opponentId
+  const opponentName = displayMatch.creatorId === user?.id 
+    ? (hasComputerOpponent ? '🤖 Chess AI' : (displayMatch.opponent?.name || (isFreePlay ? 'Practice Mode (Play Alone)' : 'Waiting for opponent...')))
+    : displayMatch.creator?.name || 'Unknown'
 
   const currentTurn = game.turn()
   const isWhiteTurn = currentTurn === 'w'
@@ -614,7 +823,7 @@ export default function Game() {
             </div>
           )}
           
-          {isFreePlay && !match.opponentId && (
+          {isFreePlay && !displayMatch.opponentId && (
             <div className="practice-mode-message">
               <p>🎮 <strong>Practice Mode</strong></p>
               <p className="practice-subtext">Play against yourself or practice your moves. No opponent required!</p>
@@ -639,16 +848,16 @@ export default function Game() {
               {isPlayerTurn ? (
                 <span>✅ Your Turn ({isWhiteTurn ? 'White' : 'Black'})</span>
               ) : (
-                <span>⏳ {hasComputerOpponent ? '🤖 Computer\'s Turn' : (isFreePlay && !match.opponentId ? 'Switch Sides' : 'Opponent\'s Turn')} ({isWhiteTurn ? 'White' : 'Black'})</span>
+                <span>⏳ {hasComputerOpponent ? '🤖 Computer\'s Turn' : (isFreePlay && !displayMatch.opponentId ? 'Switch Sides' : 'Opponent\'s Turn')} ({isWhiteTurn ? 'White' : 'Black'})</span>
               )}
             </div>
           )}
           
-          {/* Always show chess board, even when waiting or in practice mode */}
+          {/* Always show chess board - especially for free matches */}
           <ChessBoard
             game={game}
             onMove={handleMove}
-            isPlayerTurn={isPlayerTurn && (!waitingForOpponent || isFreePlay)}
+            isPlayerTurn={isFreePlay ? true : (isPlayerTurn && !waitingForOpponent)}
             playerColor={playerColor}
           />
           
@@ -658,7 +867,7 @@ export default function Game() {
             </div>
           )}
           
-          {isFreePlay && !match.opponentId && (
+          {isFreePlay && !displayMatch.opponentId && (
             <div className="practice-note">
               <p>💡 <strong>Practice Mode:</strong> You can play both sides. Make moves for white and black to practice different strategies!</p>
             </div>
@@ -678,7 +887,7 @@ export default function Game() {
             </div>
             <div className="info-item">
               <span>Status:</span>
-              <span className={`status-badge ${match.status}`}>{match.status.toUpperCase()}</span>
+              <span className={`status-badge ${displayMatch.status}`}>{displayMatch.status.toUpperCase()}</span>
             </div>
           </div>
 

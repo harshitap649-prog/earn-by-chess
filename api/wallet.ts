@@ -29,19 +29,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     } catch (dbError: any) {
       console.error('Database error in wallet:', dbError);
+      const errorMessage = dbError?.message || 'Unknown database error';
+      const errorString = typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage);
+      
       // If database is not connected, return default values instead of error
-      if (dbError.message?.includes('connect') || dbError.message?.includes('DATABASE_URL')) {
+      if (errorString.includes('connect') || errorString.includes('DATABASE_URL') || errorString.includes('P1001')) {
         console.warn('Database not connected, returning default wallet values');
         return res.json({
           balance: 0,
           lockedBalance: 0,
         });
       }
-      // For other errors, still return 500
-      throw dbError;
+      // For other errors, return 500 with safe error message
+      return res.status(500).json({ 
+        error: errorString || 'Failed to get wallet',
+        details: 'An error occurred while fetching wallet data'
+      });
     }
   } catch (error: any) {
     console.error('Wallet error:', error);
-    return res.status(500).json({ error: error.message || 'Failed to get wallet' });
+    const errorMessage = error?.message || 'Failed to get wallet';
+    const errorString = typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage);
+    return res.status(500).json({ 
+      error: errorString,
+      details: 'An unexpected error occurred'
+    });
   }
 }

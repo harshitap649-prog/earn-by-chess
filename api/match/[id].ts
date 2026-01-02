@@ -42,6 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       } catch (err) {
         console.error('Error fetching creator:', err);
+        // Continue without creator info
       }
 
       if (match.opponentId) {
@@ -52,24 +53,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
         } catch (err) {
           console.error('Error fetching opponent:', err);
+          // Continue without opponent info
         }
       }
 
       return res.json({
         ...match,
-        creator,
-        opponent,
+        creator: creator || { id: match.creatorId, name: 'Unknown', email: '' },
+        opponent: opponent || (match.opponentId ? { id: match.opponentId, name: 'Unknown', email: '' } : null),
       });
     } catch (dbError: any) {
       console.error('Database error in get match:', dbError);
-      if (dbError.message?.includes('connect') || dbError.message?.includes('DATABASE_URL')) {
-        return res.status(404).json({ error: 'Match not found - database not connected' });
+      const errorMessage = dbError?.message || 'Unknown database error';
+      const errorString = typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage);
+      
+      if (errorString.includes('connect') || errorString.includes('DATABASE_URL') || errorString.includes('Can\'t reach database') || errorString.includes('P1001')) {
+        return res.status(503).json({ 
+          error: 'Database not available',
+          details: 'The database connection is not configured. Please check DATABASE_URL environment variable.'
+        });
       }
-      throw dbError;
+      // For other database errors, return 500 with safe error message
+      return res.status(500).json({ 
+        error: errorString || 'Failed to get match',
+        details: 'An error occurred while fetching match data'
+      });
     }
   } catch (error: any) {
     console.error('Get match error:', error);
-    return res.status(500).json({ error: error.message || 'Failed to get match' });
+    const errorMessage = error?.message || 'Failed to get match';
+    const errorString = typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage);
+    return res.status(500).json({ 
+      error: errorString,
+      details: 'An unexpected error occurred'
+    });
   }
 }
 

@@ -294,34 +294,139 @@
 
 /* Mobile Responsive */
 @media (max-width: 767px) {
+  .main-nav {
+    padding: 0;
+  }
+
   .nav-container {
-    padding: 0 15px;
-  }
-
-  .nav-menu {
-    gap: 4px;
-  }
-
-  .nav-link {
-    padding: 10px 12px;
-    font-size: 13px;
+    padding: 0 10px;
   }
 
   .nav-logo {
-    font-size: 18px;
+    font-size: 16px;
+    padding: 12px 0;
   }
 
   .logo-icon {
-    font-size: 24px;
+    font-size: 20px;
+  }
+
+  .nav-menu {
+    gap: 2px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .nav-link {
+    padding: 8px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+  }
+
+  .nav-icon {
+    font-size: 16px;
+  }
+
+  .nav-user {
+    font-size: 12px;
+    gap: 6px;
   }
 
   .nav-logout-btn {
     padding: 6px 10px;
-    font-size: 13px;
+    font-size: 12px;
+    border-radius: 6px;
   }
 
   .nav-modal-content {
-    margin: 10px;
-    max-width: calc(100% - 20px);
+    margin: 12px;
+    max-width: calc(100% - 24px);
+    border-radius: 12px;
+  }
+
+  .nav-modal-header {
+    padding: 16px;
+  }
+
+  .nav-modal-header h3 {
+    font-size: 18px;
+  }
+
+  .nav-modal-body {
+    padding: 16px;
+  }
+
+  .nav-modal-body p {
+    font-size: 14px;
+  }
+
+  .nav-modal-subtext {
+    font-size: 12px;
+  }
+
+  .nav-modal-footer {
+    padding: 16px;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .nav-modal-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+/* Small Mobile Devices */
+@media (max-width: 480px) {
+  .nav-container {
+    padding: 0 8px;
+  }
+
+  .nav-logo {
+    font-size: 14px;
+    padding: 10px 0;
+  }
+
+  .logo-icon {
+    font-size: 18px;
+  }
+
+  .nav-link {
+    padding: 7px 8px;
+    font-size: 11px;
+  }
+
+  .nav-icon {
+    font-size: 14px;
+  }
+
+  .nav-logout-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .nav-user {
+    font-size: 11px;
+  }
+}
+
+/* Extra Small Mobile Devices */
+@media (max-width: 360px) {
+  .nav-container {
+    padding: 0 6px;
+  }
+
+  .nav-link {
+    padding: 6px 6px;
+    font-size: 10px;
+  }
+
+  .nav-logo {
+    font-size: 13px;
+  }
+
+  .logo-icon {
+    font-size: 16px;
   }
 }

@@ -29,15 +29,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const parsed = createMatchSchema.parse(req.body);
     const entryFee = parsed.entryFee !== undefined ? parsed.entryFee : 10;
 
-    const match = await createMatch(user.id, entryFee);
-
-    return res.json(match);
+    try {
+      const match = await createMatch(user.id, entryFee);
+      return res.json(match);
+    } catch (dbError: any) {
+      console.error('Database error in create match:', dbError);
+      const errorMessage = dbError?.message || 'Unknown database error';
+      const errorString = typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage);
+      
+      // If database is not connected, return a helpful error
+      if (errorString.includes('connect') || errorString.includes('DATABASE_URL') || errorString.includes('Can\'t reach database') || errorString.includes('P1001')) {
+        return res.status(503).json({ 
+          error: 'Database not available',
+          details: 'The database connection is not configured. Please check DATABASE_URL environment variable.'
+        });
+      }
+      // For other database errors, return 500 with safe error message
+      return res.status(500).json({ 
+        error: errorString || 'Failed to create match',
+        details: 'An error occurred while creating the match'
+      });
+    }
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors[0].message });
     }
     console.error('Create match error:', error);
-    return res.status(500).json({ error: error.message || 'Failed to create match' });
+    const errorMessage = error?.message || 'Failed to create match';
+    const errorString = typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage);
+    return res.status(500).json({ 
+      error: errorString,
+      details: 'An unexpected error occurred'
+    });
   }
 }
 

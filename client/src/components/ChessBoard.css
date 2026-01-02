@@ -363,58 +363,120 @@
 
 @media (max-width: 768px) {
   .chess-board-container {
-    padding: 15px;
-    gap: 8px;
+    padding: 12px;
+    gap: 6px;
+    border-radius: 16px;
   }
 
   .board-controls {
     align-self: center;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
+    gap: 8px;
   }
 
   .board-control-btn {
     padding: 6px 12px;
     font-size: 12px;
+    border-radius: 6px;
   }
 
   .chess-board {
-    width: min(90vw, 500px);
-    height: min(90vw, 500px);
+    width: min(92vw, 480px);
+    height: min(92vw, 480px);
     border-width: 3px;
+    border-radius: 6px;
   }
 
   .file-labels {
-    width: min(90vw, 500px);
-    font-size: 14px;
+    width: min(92vw, 480px);
+    font-size: 13px;
+  }
+
+  .file-label {
+    padding: 4px;
   }
 
   .rank-labels {
-    height: min(90vw, 500px);
-    font-size: 14px;
+    height: min(92vw, 480px);
+    font-size: 13px;
+  }
+
+  .rank-label {
+    padding: 4px 8px;
   }
 
   .piece {
-    font-size: min(13vw, 55px);
+    font-size: min(12vw, 50px);
   }
 }
 
 @media (max-width: 480px) {
+  .chess-board-container {
+    padding: 10px;
+    gap: 5px;
+  }
+
+  .board-controls {
+    margin-bottom: 10px;
+    gap: 6px;
+  }
+
+  .board-control-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+
   .chess-board {
-    width: min(95vw, 400px);
-    height: min(95vw, 400px);
+    width: min(94vw, 400px);
+    height: min(94vw, 400px);
+    border-width: 2px;
   }
 
   .file-labels {
-    width: min(95vw, 400px);
+    width: min(94vw, 400px);
     font-size: 12px;
+  }
+
+  .file-label {
+    padding: 3px;
   }
 
   .rank-labels {
-    height: min(95vw, 400px);
+    height: min(94vw, 400px);
     font-size: 12px;
   }
 
+  .rank-label {
+    padding: 3px 6px;
+  }
+
   .piece {
-    font-size: min(14vw, 45px);
+    font-size: min(13vw, 42px);
+  }
+}
+
+@media (max-width: 360px) {
+  .chess-board-container {
+    padding: 8px;
+    gap: 4px;
+  }
+
+  .board-control-btn {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .chess-board {
+    width: min(96vw, 360px);
+    height: min(96vw, 360px);
+  }
+
+  .file-labels,
+  .rank-labels {
+    font-size: 11px;
+  }
+
+  .piece {
+    font-size: min(14vw, 38px);
   }
 }

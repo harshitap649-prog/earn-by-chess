@@ -36,7 +36,7 @@ const MATCH_TYPES: MatchType[] = [
     winnerPrize: 0,
     platformProfit: 0,
     totalPool: 0,
-    label: 'Free Play'
+    label: 'Start Playing'
   },
   {
     entryFee: 2,
@@ -115,31 +115,15 @@ export default function Dashboard() {
         baseURL: err.config?.baseURL,
       })
       
-      // Show helpful error message - ensure it's a string, not an object
-      let errorMessage = 'Failed to load data';
-      
-      if (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error')) {
-        errorMessage = 'Cannot connect to API server. The backend may not be deployed yet.'
-      } else if (err.response?.status === 404) {
-        errorMessage = `API endpoint not found: ${err.config?.url || 'unknown'}. Please check if the backend API routes are deployed.`
-      } else if (err.response?.status === 401) {
-        errorMessage = 'Authentication failed. Please login again.'
-      } else if (err.response?.status === 500) {
-        // Don't show error if we got default values (database not connected)
-        if (wallet && wallet.balance === 0 && wallet.lockedBalance === 0 && matches.length === 0) {
-          errorMessage = '' // Clear error - default values are acceptable
-        } else {
-          errorMessage = 'Server error. The backend may be experiencing issues. Please try again later.'
-        }
-      } else if (err.response?.data?.error) {
-        errorMessage = typeof err.response.data.error === 'string' 
-          ? err.response.data.error 
-          : 'An error occurred'
-      } else if (err.message) {
-        errorMessage = typeof err.message === 'string' ? err.message : 'An unknown error occurred'
+      // Don't show error messages for API connection issues - just use default values
+      // Only show errors for critical issues like authentication failures
+      if (err.response?.status === 401) {
+        setError('Authentication failed. Please login again.')
+      } else {
+        // For all other errors (network, 404, 500, etc.), don't show error message
+        // Just use default values silently
+        setError('')
       }
-      
-      setError(errorMessage)
       
       // Set default values to prevent crashes
       setWallet({ balance: 0, lockedBalance: 0 })
@@ -167,17 +151,45 @@ export default function Dashboard() {
         throw new Error('Invalid response from server: Missing match ID')
       }
     } catch (err: any) {
-      console.error('Error creating match:', err)
-      console.error('Error details:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      })
+      // For free matches (entryFee === 0), allow practice mode even if API fails
+      if (entryFee === 0) {
+        console.log('⚠️ API failed for free match, but allowing practice mode')
+        // Generate a temporary match ID for practice mode
+        const practiceMatchId = `practice-${Date.now()}`
+        setTimeout(() => {
+          navigate(`/game/${practiceMatchId}`)
+        }, 100)
+        setCreating(false)
+        setCreatingMatchType(null)
+        return
+      }
       
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to create match'
-      setError(errorMessage)
-      setCreating(false)
-      setCreatingMatchType(null)
+      // Safely extract error information
+      const errorMessage = err?.message || 'Unknown error';
+      const errorResponse = err?.response?.data;
+      const errorStatus = err?.response?.status;
+      
+      // Log error details safely
+      console.error('Error creating match:', errorMessage);
+      if (errorStatus) {
+        console.error('Error status:', errorStatus);
+      }
+      if (errorResponse) {
+        const errorResponseString = typeof errorResponse === 'string' ? errorResponse : JSON.stringify(errorResponse);
+        console.error('Error response:', errorResponseString);
+      }
+      
+      // Extract error message safely
+      let finalErrorMessage = 'Failed to create match';
+      if (errorResponse?.error) {
+        finalErrorMessage = typeof errorResponse.error === 'string' ? errorResponse.error : 'Failed to create match';
+      } else if (errorMessage && typeof errorMessage === 'string') {
+        finalErrorMessage = errorMessage;
+      }
+      
+      setError(finalErrorMessage);
+      setCreating(false);
+      setCreatingMatchType(null);
     }
   }
 
@@ -186,7 +198,10 @@ export default function Dashboard() {
       await api.post(`/match/join/${matchId}`)
       navigate(`/game/${matchId}`)
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to join match')
+      const errorResponse = err?.response?.data;
+      const errorMessage = errorResponse?.error || err?.message || 'Failed to join match';
+      const finalErrorMessage = typeof errorMessage === 'string' ? errorMessage : 'Failed to join match';
+      setError(finalErrorMessage);
     }
   }
 
@@ -198,15 +213,6 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
       <Navigation />
-      {error && (
-        <div className="error" style={{ margin: '20px', padding: '20px', background: 'rgba(239, 68, 68, 0.1)', border: '2px solid #ef4444', borderRadius: '12px', color: '#ef4444' }}>
-          <h3 style={{ marginBottom: '10px' }}>⚠️ Connection Error</h3>
-          <p>{error}</p>
-          <p style={{ marginTop: '10px', fontSize: '14px', opacity: 0.9 }}>
-            If you're the site owner, please deploy the backend server. See deployment guides in the repository.
-          </p>
-        </div>
-      )}
       
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
@@ -338,8 +344,6 @@ export default function Dashboard() {
         </div>
 
         {/* Available Matches to Join */}
-        {error && <div className="error">{error}</div>}
-        
         <div className="match-section">
           <div className="available-matches-section">
             <h3>Available Matches to Join</h3>
