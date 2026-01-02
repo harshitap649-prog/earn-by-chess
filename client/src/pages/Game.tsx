@@ -75,13 +75,12 @@ export default function Game() {
     
     if (isPracticeMatch) {
       // Practice mode - don't need user or API
-      // For free play, automatically add computer opponent for AI
+      // Always add computer opponent for AI in practice matches
       console.log('🎮 Practice mode detected - loading without API')
-      const isVercel = window.location.hostname.includes('vercel.app')
       const defaultMatch: Match = {
         id: matchId,
         creatorId: user?.id || 'practice-user',
-        opponentId: isVercel ? 'computer-ai' : null, // Add computer opponent on Vercel for AI
+        opponentId: 'computer-ai', // Always add computer opponent for AI
         entryFee: 0,
         status: 'started',
         creator: { name: user?.name || 'You' },
@@ -91,9 +90,7 @@ export default function Game() {
       setWaitingForOpponent(false)
       setIsPlayerTurn(true)
       setLoading(false)
-      if (isVercel) {
-        console.log('🤖 Computer AI enabled for free play on Vercel')
-      }
+      console.log('🤖 Computer AI enabled for practice match')
       return
     }
 
@@ -580,53 +577,72 @@ export default function Game() {
         const currentTurn = newGame.turn()
         const isVercel = window.location.hostname.includes('vercel.app')
         
-        // In practice mode (free play without opponent), always allow moves (user plays both sides)
-        if (isPracticeMode) {
-          setIsPlayerTurn(true) // Always allow moves in practice mode
-        } else if (hasComputerOpponent || (isFreePlay && !isPracticeMode)) {
-          // For computer matches OR free play matches, use AI
-          setIsPlayerTurn(false)
-          
-          // Always use client-side AI (works everywhere)
-          console.log('🤖 Using client-side AI for computer opponent')
-          
-          // Calculate computer move with timeout protection (increased for deeper search)
-          const moveTimeout = setTimeout(() => {
-            console.warn('⚠️ Computer move calculation timeout - using quick fallback')
-            // Quick fallback: pick best capture or first move
-            try {
-              const fallbackGame = new Chess(newGame.fen())
-              const moves = fallbackGame.moves({ verbose: true })
-              if (moves.length > 0) {
-                // Find best capture
-                let bestMove = moves[0]
-                for (const move of moves) {
-                  if (move.captured) {
-                    bestMove = move
-                    break
+        // For free play matches, always use AI (simplified logic)
+        if (isFreePlay) {
+          // Check if it's practice mode (no opponent) or AI mode (with opponent)
+          if (isPracticeMode) {
+            // Practice mode - user plays both sides
+            setIsPlayerTurn(true)
+          } else {
+            // AI mode - computer will play
+            setIsPlayerTurn(false)
+            
+            // Always use client-side AI for free play matches
+            console.log('🤖 Free play match - using client-side AI')
+            console.log('   Match ID:', currentMatch?.id)
+            console.log('   Opponent ID:', currentMatch?.opponentId)
+            console.log('   Is Practice Mode:', isPracticeMode)
+            console.log('   Has Computer Opponent:', hasComputerOpponent)
+            
+            // Calculate computer move with timeout protection
+            const moveTimeout = setTimeout(() => {
+              console.warn('⚠️ Computer move calculation timeout - using quick fallback')
+              try {
+                const fallbackGame = new Chess(newGame.fen())
+                const moves = fallbackGame.moves({ verbose: true })
+                if (moves.length > 0) {
+                  // Find best capture or first move
+                  let bestMove = moves[0]
+                  let bestScore = -Infinity
+                  for (const move of moves) {
+                    let score = 0
+                    if (move.captured) {
+                      const pieceValues: { [key: string]: number } = {
+                        'p': 100, 'n': 320, 'b': 330, 'r': 500, 'q': 900, 'k': 20000
+                      }
+                      score += pieceValues[move.captured] || 0
+                    }
+                    fallbackGame.move(move)
+                    if (fallbackGame.isCheck()) score += 50
+                    fallbackGame.undo()
+                    if (score > bestScore) {
+                      bestScore = score
+                      bestMove = move
+                    }
+                  }
+                  const result = fallbackGame.move(bestMove)
+                  if (result) {
+                    setGame(fallbackGame)
+                    setMoveHistory(fallbackGame.history())
+                    setIsPlayerTurn(true)
+                    updateGameStatus(fallbackGame)
+                    console.log('✅ Fallback move applied:', result)
                   }
                 }
-                const result = fallbackGame.move(bestMove)
-                if (result) {
-                  setGame(fallbackGame)
-                  setMoveHistory(fallbackGame.history())
-                  setIsPlayerTurn(true)
-                  updateGameStatus(fallbackGame)
-                  console.log('✅ Fallback move applied:', result)
-                }
+              } catch (e) {
+                console.error('Fallback failed:', e)
+                setIsPlayerTurn(true)
               }
-            } catch (e) {
-              console.error('Fallback failed:', e)
-              setIsPlayerTurn(true)
-            }
-          }, 15000) // 15 second timeout (increased for deeper PRO level search)
-          
-          // Use requestAnimationFrame to prevent blocking
-          requestAnimationFrame(() => {
+            }, 15000) // 15 second timeout
+            
+            // Calculate AI move
             setTimeout(() => {
               try {
                 const startTime = Date.now()
-                console.log('🤖 Starting AI calculation...')
+                console.log('🤖 Starting PRO AI calculation...')
+                console.log('   Current FEN:', newGame.fen())
+                console.log('   Current turn:', newGame.turn())
+                
                 const computerMove = getComputerMove(newGame)
                 const calcTime = Date.now() - startTime
                 console.log(`⏱️ Move calculation took ${calcTime}ms`)
@@ -637,7 +653,7 @@ export default function Game() {
                   console.log('🤖 Computer move calculated:', computerMove)
                   const computerGame = new Chess(newGame.fen())
                   
-                  // Try standard move format first
+                  // Try standard move format
                   let computerMoveResult = computerGame.move({
                     from: computerMove.from,
                     to: computerMove.to,
@@ -647,7 +663,7 @@ export default function Game() {
                   if (!computerMoveResult) {
                     // Try alternative format
                     computerGame.load(newGame.fen())
-                    computerMoveResult = computerGame.move(`${computerMove.from}${computerMove.to}${computerMove.promotion ? computerMove.promotion : ''}`)
+                    computerMoveResult = computerGame.move(`${computerMove.from}${computerMove.to}${computerMove.promotion || ''}`)
                   }
                   
                   if (computerMoveResult) {
@@ -658,9 +674,8 @@ export default function Game() {
                     updateGameStatus(computerGame)
                   } else {
                     console.error('❌ Failed to apply computer move:', computerMove)
-                    console.error('   Current FEN:', newGame.fen())
                     console.error('   Available moves:', computerGame.moves({ verbose: true }).slice(0, 5))
-                    setIsPlayerTurn(true) // Allow player to continue
+                    setIsPlayerTurn(true)
                   }
                 } else {
                   console.warn('⚠️ No computer move available')
@@ -668,12 +683,13 @@ export default function Game() {
                 }
               } catch (error) {
                 console.error('❌ Error calculating computer move:', error)
+                console.error('   Error details:', error)
                 clearTimeout(moveTimeout)
-                setIsPlayerTurn(true) // Allow player to continue
+                setIsPlayerTurn(true)
               }
-            }, 100) // Small delay
-          })
-        } else if (isFreePlay) {
+            }, 200) // Small delay for UI update
+          }
+        } else {
           // For free play, always allow moves
           setIsPlayerTurn(true)
         } else {
